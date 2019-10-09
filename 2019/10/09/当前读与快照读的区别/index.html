@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="mysql,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="blog" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="基于Innodb存储引擎的快照读与当前读分析:1.MVCCMySQL InnoDB存储引擎 ，实现的是基于多版本的并发控制协议——MVCC (Multi-Version Concurrency Control) (注：与MVCC相对的，是基于锁的并发控制，Lock-Based Concurrency Control)。MVCC最大的好处：读不加锁，读写不冲突。 在MVCC并发控制中，读操作可以分成">
+<meta name="keywords" content="mysql">
+<meta property="og:type" content="article">
+<meta property="og:title" content="当前读与快照读的区别">
+<meta property="og:url" content="http://Homeofpan.github.io/2019/10/09/当前读与快照读的区别/index.html">
+<meta property="og:site_name" content="blog">
+<meta property="og:description" content="基于Innodb存储引擎的快照读与当前读分析:1.MVCCMySQL InnoDB存储引擎 ，实现的是基于多版本的并发控制协议——MVCC (Multi-Version Concurrency Control) (注：与MVCC相对的，是基于锁的并发控制，Lock-Based Concurrency Control)。MVCC最大的好处：读不加锁，读写不冲突。 在MVCC并发控制中，读操作可以分成">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-10-09T14:44:33.735Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="当前读与快照读的区别">
+<meta name="twitter:description" content="基于Innodb存储引擎的快照读与当前读分析:1.MVCCMySQL InnoDB存储引擎 ，实现的是基于多版本的并发控制协议——MVCC (Multi-Version Concurrency Control) (注：与MVCC相对的，是基于锁的并发控制，Lock-Based Concurrency Control)。MVCC最大的好处：读不加锁，读写不冲突。 在MVCC并发控制中，读操作可以分成">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://Homeofpan.github.io/2019/10/09/当前读与快照读的区别/">
+
+
+
+
+
+  <title>当前读与快照读的区别 | blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://Homeofpan.github.io/2019/10/09/当前读与快照读的区别/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pan tao">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">当前读与快照读的区别</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-09T15:07:41+08:00">
+                2019-10-09
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/mysql/" itemprop="url" rel="index">
+                    <span itemprop="name">mysql</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="基于Innodb存储引擎的快照读与当前读分析"><a href="#基于Innodb存储引擎的快照读与当前读分析" class="headerlink" title="基于Innodb存储引擎的快照读与当前读分析:"></a>基于Innodb存储引擎的快照读与当前读分析:</h3><h2 id="1-MVCC"><a href="#1-MVCC" class="headerlink" title="1.MVCC"></a>1.MVCC</h2><p>MySQL InnoDB存储引擎 ，实现的是基于多版本的并发控制协议——MVCC (Multi-Version Concurrency Control) (注：与MVCC相对的，是基于锁的并发控制，Lock-Based Concurrency Control)。MVCC最大的好处：读不加锁，读写不冲突。 在MVCC并发控制中，读操作可以分成两类：快照读 (snapshot read)与当前读 (current read)。快照读，读取的是记录的可见版本 (有可能是历史版本)，不用加锁。当前读，读取的是记录的最新版本，并且，当前读返回的记录，都会加上锁，保证其他事务不会再并发修改这条记录。</p>
+<h2 id="快照读与当前读"><a href="#快照读与当前读" class="headerlink" title="快照读与当前读"></a>快照读与当前读</h2><ul>
+<li><strong>快照读:</strong>最简单的select操作,属于快照读,不加锁<br>select * from table where id = 1;</li>
+<li><strong>当前读:</strong>特殊的读与增删改操作,属于当前读,会读取数据库原本的数据,加锁<br>select * from table where xxx lock in share mode; (共享锁)<br>select * from table where xxx for update;<br>insert into table values()<br>update table set xxx where xxx<br>delete form table where xxx</li>
+</ul>
+<p>以上语句，都属于当前读，读取记录的最新版本。并且，读取之后，还需要保证其他并发事务不能修改当前记录，对读取记录加锁。其中，除了第一条语句，对读取记录加S锁 (共享锁)外，其他的操作，都加的是X锁 (排它锁)。</p>
+<h3 id="下面以实例来详解快照读与当前读"><a href="#下面以实例来详解快照读与当前读" class="headerlink" title="下面以实例来详解快照读与当前读:"></a>下面以实例来详解快照读与当前读:</h3><p>在数据库中存在user表并且有4条数据</p>
+<h3 id="1-select快照读-照片"><a href="#1-select快照读-照片" class="headerlink" title="1.select快照读(照片):"></a>1.select快照读(照片):</h3><h4 id="当你执行select-之后，在A与B事务中都会返回4条一样的数据，这是不用想的，当执行select的时候，innodb默认会执行快照读，相当于就是给你目前的状态找了一张照片，以后执行select-的时候就会返回当前照片里面的数据，当其他事务提交了也对你不造成影响，和你没关系，这就实现了可重复读了，那这个照片是什么时候生成的呢？不是开启事务的时候，是当你第一次执行select的时候，也就是说，当A开启了事务，然后没有执行任何操作，这时候B-insert了一条数据然后commit-这时候A执行-select，那么返回的数据中就会有B添加的那条数据……之后无论再有其他事务commit都没有关系，因为照片已经生成了，而且不会再生成了，以后都会参考这张照片。"><a href="#当你执行select-之后，在A与B事务中都会返回4条一样的数据，这是不用想的，当执行select的时候，innodb默认会执行快照读，相当于就是给你目前的状态找了一张照片，以后执行select-的时候就会返回当前照片里面的数据，当其他事务提交了也对你不造成影响，和你没关系，这就实现了可重复读了，那这个照片是什么时候生成的呢？不是开启事务的时候，是当你第一次执行select的时候，也就是说，当A开启了事务，然后没有执行任何操作，这时候B-insert了一条数据然后commit-这时候A执行-select，那么返回的数据中就会有B添加的那条数据……之后无论再有其他事务commit都没有关系，因为照片已经生成了，而且不会再生成了，以后都会参考这张照片。" class="headerlink" title="当你执行select *之后，在A与B事务中都会返回4条一样的数据，这是不用想的，当执行select的时候，innodb默认会执行快照读，相当于就是给你目前的状态找了一张照片，以后执行select 的时候就会返回当前照片里面的数据，当其他事务提交了也对你不造成影响，和你没关系，这就实现了可重复读了，那这个照片是什么时候生成的呢？不是开启事务的时候，是当你第一次执行select的时候，也就是说，当A开启了事务，然后没有执行任何操作，这时候B insert了一条数据然后commit,这时候A执行 select，那么返回的数据中就会有B添加的那条数据……之后无论再有其他事务commit都没有关系，因为照片已经生成了，而且不会再生成了，以后都会参考这张照片。"></a>当你执行select *之后，在A与B事务中都会返回4条一样的数据，这是不用想的，当执行select的时候，innodb默认会执行快照读，相当于就是给你目前的状态找了一张照片，以后执行select 的时候就会返回当前照片里面的数据，当其他事务提交了也对你不造成影响，和你没关系，这就实现了可重复读了，那这个照片是什么时候生成的呢？不是开启事务的时候，是当你第一次执行select的时候，也就是说，当A开启了事务，然后没有执行任何操作，这时候B insert了一条数据然后commit,这时候A执行 select，那么返回的数据中就会有B添加的那条数据……之后无论再有其他事务commit都没有关系，因为照片已经生成了，而且不会再生成了，以后都会参考这张照片。</h4><h3 id="测试-当前数据库表的数据如下"><a href="#测试-当前数据库表的数据如下" class="headerlink" title="测试:当前数据库表的数据如下:"></a>测试:当前数据库表的数据如下:</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select * from user;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">| id | name | phone       |</span><br><span class="line">|  1 | pan  | 12345678912 |</span><br><span class="line">|  2 | liu  | 12345678945 |</span><br><span class="line">|  3 | han  | 45678912354 |</span><br></pre></td></tr></table></figure>
+
+<h3 id="ClientA"><a href="#ClientA" class="headerlink" title="ClientA:"></a>ClientA:</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">set autocommit = 0; //关闭自动事务提交</span><br><span class="line">select * from user;</span><br><span class="line">//此处查询的数据还是刚开始的那些数据,但此处A事务并没提交</span><br><span class="line">| id | name | phone       |</span><br><span class="line">|  1 | pan  | 12345678912 |</span><br><span class="line">|  2 | liu  | 12345678945 |</span><br><span class="line">|  3 | han  | 45678912354 |</span><br></pre></td></tr></table></figure>
+
+<h3 id="ClientB"><a href="#ClientB" class="headerlink" title="ClientB:"></a>ClientB:</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">insert into user(name,phone) values(&apos;sb&apos;,&apos;45678912345&apos;);   //自动提交事务B,插入了一条数据</span><br><span class="line">select * from user;</span><br><span class="line">//数据已经成功插入了</span><br><span class="line">| id | name | phone       |</span><br><span class="line">|  1 | pan  | 12345678912 |</span><br><span class="line">|  2 | liu  | 12345678945 |</span><br><span class="line">|  3 | han  | 45678912354 |</span><br><span class="line">|  4 | sb   | 45678912345 |</span><br></pre></td></tr></table></figure>
+
+<h3 id="ClientA-1"><a href="#ClientA-1" class="headerlink" title="ClientA:"></a>ClientA:</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">//还处于上面的事务中</span><br><span class="line">select * from user;</span><br><span class="line">//此处查询的数据还是刚开始的那些数据,但此处A事务并没提交</span><br><span class="line">| id | name | phone       |</span><br><span class="line">|  1 | pan  | 12345678912 |</span><br><span class="line">|  2 | liu  | 12345678945 |</span><br><span class="line">|  3 | han  | 45678912354 |</span><br><span class="line">//现在提交事务</span><br><span class="line">commit;</span><br></pre></td></tr></table></figure>
+
+<h3 id="ClientA-2"><a href="#ClientA-2" class="headerlink" title="ClientA:"></a>ClientA:</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">select * from user;</span><br><span class="line">| id | name | phone       |</span><br><span class="line">|  1 | pan  | 12345678912 |</span><br><span class="line">|  2 | liu  | 12345678945 |</span><br><span class="line">|  3 | han  | 45678912354 |</span><br><span class="line">|  4 | sb   | 45678912345 |</span><br><span class="line">//更新为最新的数据,说明了在原来事务A中select查询时已经生成了一张快照,</span><br><span class="line">//在事务没有提交时,不管其他事务对该数据如何操作都不会受影响</span><br></pre></td></tr></table></figure>
+
+<h3 id="2、update、insert、delete-当前读"><a href="#2、update、insert、delete-当前读" class="headerlink" title="2、update、insert、delete 当前读"></a>2、update、insert、delete 当前读</h3><p>  当你执行这几个操作的时候默认会执行当前读，也就是会读取最新的记录，也就是别的事务提交的数据你也可以看到，这样很好理解啊，假设你要update一个记录，另一个事务已经delete这条数据并且commit了，这样不是会产生冲突吗，所以你update的时候肯定要知道最新的信息啊。在这里介绍一下update的过程吧，首先会执行当前读，然后把返回的数据加锁，之后执行update。加锁是防止别的事务在这个时候对这条记录做什么，默认加的是排他锁，也就是你读都不可以，这样就可以保证数据不会出错了。但注意一点，就算你这里加了写锁，别的事务也还是能访问的，是不是很奇怪？数据库采取了一致性非锁定读，别的事务会去读取一个快照数据。<br>  innodb默认隔离级别是RR， 是通过MVVC来实现了，读方式有两种，执行select的时候是快照读，其余是当前读，所以，mvvc不能根本上解决幻读的情况</p>
+<h3 id="测试-当前user表中有四条数据"><a href="#测试-当前user表中有四条数据" class="headerlink" title="测试:当前user表中有四条数据"></a>测试:当前user表中有四条数据</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">| id | name | phone       |</span><br><span class="line">|  1 | pan  | 12345678912 |</span><br><span class="line">|  2 | liu  | 12345678945 |</span><br><span class="line">|  3 | han  | 45678912354 |</span><br><span class="line">|  4 | sb   | 45678912345 |</span><br></pre></td></tr></table></figure>
+
+<h3 id="ClientA-使用for-update来触发当前读"><a href="#ClientA-使用for-update来触发当前读" class="headerlink" title="ClientA:使用for update来触发当前读"></a>ClientA:使用for update来触发当前读</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select * from user where id =3 for update;</span><br></pre></td></tr></table></figure>
+
+<h3 id="ClientB-删除ClientA锁读取的那条数据"><a href="#ClientB-删除ClientA锁读取的那条数据" class="headerlink" title="ClientB:删除ClientA锁读取的那条数据"></a>ClientB:删除ClientA锁读取的那条数据</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">delete from user where id = 3;</span><br><span class="line">----B--会阻塞住,如果A长时间不释放锁的话B就超时</span><br></pre></td></tr></table></figure>
+
+<h3 id="该实例证明了A执行的当前读是加了X-排它锁-锁"><a href="#该实例证明了A执行的当前读是加了X-排它锁-锁" class="headerlink" title="该实例证明了A执行的当前读是加了X(排它锁)锁;"></a>该实例证明了A执行的当前读是加了X(排它锁)锁;</h3><h3 id="一致性非锁定读"><a href="#一致性非锁定读" class="headerlink" title="一致性非锁定读"></a>一致性非锁定读</h3><p>　　<a href="https://dev.mysql.com/doc/refman/5.7/en/glossary.html#glos_consistent_read" target="_blank" rel="noopener">consistent read</a> （一致性读），InnoDB用多版本来提供查询数据库在某个时间点的快照。如果隔离级别是REPEATABLE READ，那么在同一个事务中的所有一致性读都读的是事务中第一个这样的读读到的快照；如果是READ COMMITTED，那么一个事务中的每一个一致性读都会读到它自己刷新的快照版本。Consistent read（一致性读）是READ COMMITTED和REPEATABLE READ隔离级别下普通SELECT语句默认的模式。一致性读不会给它所访问的表加任何形式的锁，因此其它事务可以同时并发的修改它们。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/mysql/" rel="tag"># mysql</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/09/testPhoto/" rel="next" title="testPhoto">
+                <i class="fa fa-chevron-left"></i> testPhoto
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">pan tao</p>
+              <p class="site-description motion-element" itemprop="description">这个人有点东西</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#基于Innodb存储引擎的快照读与当前读分析"><span class="nav-number">1.</span> <span class="nav-text">基于Innodb存储引擎的快照读与当前读分析:</span></a></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#1-MVCC"><span class="nav-number"></span> <span class="nav-text">1.MVCC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#快照读与当前读"><span class="nav-number"></span> <span class="nav-text">快照读与当前读</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#下面以实例来详解快照读与当前读"><span class="nav-number">1.</span> <span class="nav-text">下面以实例来详解快照读与当前读:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-select快照读-照片"><span class="nav-number">2.</span> <span class="nav-text">1.select快照读(照片):</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#当你执行select-之后，在A与B事务中都会返回4条一样的数据，这是不用想的，当执行select的时候，innodb默认会执行快照读，相当于就是给你目前的状态找了一张照片，以后执行select-的时候就会返回当前照片里面的数据，当其他事务提交了也对你不造成影响，和你没关系，这就实现了可重复读了，那这个照片是什么时候生成的呢？不是开启事务的时候，是当你第一次执行select的时候，也就是说，当A开启了事务，然后没有执行任何操作，这时候B-insert了一条数据然后commit-这时候A执行-select，那么返回的数据中就会有B添加的那条数据……之后无论再有其他事务commit都没有关系，因为照片已经生成了，而且不会再生成了，以后都会参考这张照片。"><span class="nav-number">2.1.</span> <span class="nav-text">当你执行select *之后，在A与B事务中都会返回4条一样的数据，这是不用想的，当执行select的时候，innodb默认会执行快照读，相当于就是给你目前的状态找了一张照片，以后执行select 的时候就会返回当前照片里面的数据，当其他事务提交了也对你不造成影响，和你没关系，这就实现了可重复读了，那这个照片是什么时候生成的呢？不是开启事务的时候，是当你第一次执行select的时候，也就是说，当A开启了事务，然后没有执行任何操作，这时候B insert了一条数据然后commit,这时候A执行 select，那么返回的数据中就会有B添加的那条数据……之后无论再有其他事务commit都没有关系，因为照片已经生成了，而且不会再生成了，以后都会参考这张照片。</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#测试-当前数据库表的数据如下"><span class="nav-number">3.</span> <span class="nav-text">测试:当前数据库表的数据如下:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientA"><span class="nav-number">4.</span> <span class="nav-text">ClientA:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientB"><span class="nav-number">5.</span> <span class="nav-text">ClientB:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientA-1"><span class="nav-number">6.</span> <span class="nav-text">ClientA:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientA-2"><span class="nav-number">7.</span> <span class="nav-text">ClientA:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、update、insert、delete-当前读"><span class="nav-number">8.</span> <span class="nav-text">2、update、insert、delete 当前读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#测试-当前user表中有四条数据"><span class="nav-number">9.</span> <span class="nav-text">测试:当前user表中有四条数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientA-使用for-update来触发当前读"><span class="nav-number">10.</span> <span class="nav-text">ClientA:使用for update来触发当前读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientB-删除ClientA锁读取的那条数据"><span class="nav-number">11.</span> <span class="nav-text">ClientB:删除ClientA锁读取的那条数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#该实例证明了A执行的当前读是加了X-排它锁-锁"><span class="nav-number">12.</span> <span class="nav-text">该实例证明了A执行的当前读是加了X(排它锁)锁;</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#一致性非锁定读"><span class="nav-number">13.</span> <span class="nav-text">一致性非锁定读</span></a></li></ol></li></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pan tao</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
