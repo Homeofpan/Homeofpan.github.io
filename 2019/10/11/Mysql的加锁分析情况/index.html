@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="mysql,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="blog" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="索引和锁的分析依旧，基于InnoDB 再补充一点前提1.2PL：Two-Phase Locking传统RDBMS加锁的一个原则，就是2PL (二阶段锁)：Two-Phase Locking。相对而言，2PL比较容易理解，说的是锁操作分为两个阶段：加锁阶段与解锁阶段，并且保证加锁阶段与解锁阶段不相交。下面，仍旧以MySQL为例，来简单看看2PL在MySQL中的实现。  2PL就是将加锁/解锁分为两个">
+<meta name="keywords" content="mysql">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mysql的加锁分析情况">
+<meta property="og:url" content="http://Homeofpan.github.io/2019/10/11/Mysql的加锁分析情况/index.html">
+<meta property="og:site_name" content="blog">
+<meta property="og:description" content="索引和锁的分析依旧，基于InnoDB 再补充一点前提1.2PL：Two-Phase Locking传统RDBMS加锁的一个原则，就是2PL (二阶段锁)：Two-Phase Locking。相对而言，2PL比较容易理解，说的是锁操作分为两个阶段：加锁阶段与解锁阶段，并且保证加锁阶段与解锁阶段不相交。下面，仍旧以MySQL为例，来简单看看2PL在MySQL中的实现。  2PL就是将加锁/解锁分为两个">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eEnGAH-UXAACZSj41twA342.jpg">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFVyAU3G8AACB0n3pKWY418.jpg">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFaaAAuTTAACTl8kxySw303.jpg">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFm2AHi6yAACXA5-E1HY180.jpg">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFxaAHv5CAACbIC-obTo771.jpg">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eGTiABq3wAACP_3bsPjw465.jpg">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eHwGAZlqXAAC8aV4ARTs433.jpg">
+<meta property="og:image" content="http://officialblog-wordpress.stor.sinaapp.com/uploads/2013/12/medish-10.jpg">
+<meta property="og:image" content="http://officialblog-wordpress.stor.sinaapp.com/uploads/2013/12/medish-11.jpg">
+<meta property="og:updated_time" content="2019-10-11T07:24:22.187Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mysql的加锁分析情况">
+<meta name="twitter:description" content="索引和锁的分析依旧，基于InnoDB 再补充一点前提1.2PL：Two-Phase Locking传统RDBMS加锁的一个原则，就是2PL (二阶段锁)：Two-Phase Locking。相对而言，2PL比较容易理解，说的是锁操作分为两个阶段：加锁阶段与解锁阶段，并且保证加锁阶段与解锁阶段不相交。下面，仍旧以MySQL为例，来简单看看2PL在MySQL中的实现。  2PL就是将加锁/解锁分为两个">
+<meta name="twitter:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1eEnGAH-UXAACZSj41twA342.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://Homeofpan.github.io/2019/10/11/Mysql的加锁分析情况/">
+
+
+
+
+
+  <title>Mysql的加锁分析情况 | blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://Homeofpan.github.io/2019/10/11/Mysql的加锁分析情况/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pan tao">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Mysql的加锁分析情况</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-11T14:38:35+08:00">
+                2019-10-11
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/mysql/" itemprop="url" rel="index">
+                    <span itemprop="name">mysql</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="索引和锁的分析"><a href="#索引和锁的分析" class="headerlink" title="索引和锁的分析"></a><strong>索引和锁的分析</strong></h1><p>依旧，基于InnoDB</p>
+<h2 id="再补充一点前提"><a href="#再补充一点前提" class="headerlink" title="再补充一点前提"></a><strong>再补充一点前提</strong></h2><h3 id="1-2PL：Two-Phase-Locking"><a href="#1-2PL：Two-Phase-Locking" class="headerlink" title="1.2PL：Two-Phase Locking"></a>1.2PL：Two-Phase Locking</h3><p>传统RDBMS加锁的一个原则，就是2PL (二阶段锁)：Two-Phase Locking。相对而言，2PL比较容易理解，说的是锁操作分为两个阶段：加锁阶段与解锁阶段，并且保证加锁阶段与解锁阶段不相交。下面，仍旧以MySQL为例，来简单看看2PL在MySQL中的实现。 <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1eEnGAH-UXAACZSj41twA342.jpg" alt="二阶段锁"></p>
+<p>2PL就是将加锁/解锁分为两个完全不相交的阶段。加锁阶段：只加锁，不放锁。解锁阶段：只放锁，不加锁。</p>
+<h2 id="2-Isolation-Level（事务级别）"><a href="#2-Isolation-Level（事务级别）" class="headerlink" title="2.Isolation Level（事务级别）"></a>2.Isolation Level（事务级别）</h2><p>隔离级别：Isolation Level，也是RDBMS的一个关键特性。 MySQL/InnoDB定义的4种隔离级别： •    Read Uncommited 可以读取未提交记录。此隔离级别，基本不会使用。</p>
+<p>•    Read Committed (RC) 快照读忽略，第一篇文章写的很清楚了。 针对当前读，RC隔离级别保证对读取到的记录加锁 (记录锁)，存在幻读现象。</p>
+<p>•    Repeatable Read (RR) 快照读忽略，第一篇文章写的很清楚了。 针对当前读，RR隔离级别保证对读取到的记录加锁 (记录锁)，同时保证对读取的范围加锁，新的满足查询条件的记录不能够插入 (间隙锁)，不存在幻读现象。</p>
+<p>•    Serializable 从MVCC并发控制退化为基于锁的并发控制。不区别快照读与当前读，所有的读操作均为当前读，读加读锁 (S锁)，写加写锁 (X锁)。 Serializable隔离级别下，读写冲突，因此并发度急剧下降，不建议使用。</p>
+<h2 id="简单SQL的加锁实现分析"><a href="#简单SQL的加锁实现分析" class="headerlink" title="简单SQL的加锁实现分析"></a><strong>简单SQL的加锁实现分析</strong></h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">•SQL1：select * from t1 where id = 10;</span><br><span class="line">•SQL2：delete from t1 where id = 10;</span><br></pre></td></tr></table></figure>
+
+<p>对于上面两条sql语句，需要分析则必须明确下面几点：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">•一：id列是不是主键？</span><br><span class="line">•二：当前系统的隔离级别是什么？</span><br><span class="line">•三：id列如果不是主键，那么id列上有索引吗？</span><br><span class="line">•四：id列上如果有二级索引，那么这个索引是唯一索引吗？</span><br><span class="line">•五：两个SQL的执行计划是什么？索引扫描？全表扫描？</span><br></pre></td></tr></table></figure>
+
+<p>没有给定上述几点，分析都是假的 根据上面的条件，将sql分为如下组合：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">•组合一：id列是主键，RC隔离级别</span><br><span class="line">•组合二：id列是二级唯一索引，RC隔离级别</span><br><span class="line">•组合三：id列是二级非唯一索引，RC隔离级别</span><br><span class="line">•组合四：id列上没有索引，RC隔离级别</span><br><span class="line">•组合五：id列是主键，RR隔离级别</span><br><span class="line">•组合六：id列是二级唯一索引，RR隔离级别</span><br><span class="line">•组合七：id列是二级非唯一索引，RR隔离级别</span><br><span class="line">•组合八：id列上没有索引，RR隔离级别</span><br><span class="line">•组合九：Serializable隔离级别</span><br></pre></td></tr></table></figure>
+
+<p>下面开始分析：</p>
+<h3 id="组合一：id主键-RC"><a href="#组合一：id主键-RC" class="headerlink" title="组合一：id主键+RC"></a><strong>组合一：id主键+RC</strong></h3><p>id是主键，Read Committed隔离级别，给定SQL：delete from t1 where id = 10; 只需要将主键上，id = 10的记录加上X锁即可。如下图所示： <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFVyAU3G8AACB0n3pKWY418.jpg" alt="id主键+RC"></p>
+<p><strong>结论：</strong> id是主键时，此SQL只需要在id=10这条记录上加X锁即可。</p>
+<h3 id="组合二：id唯一索引-RC"><a href="#组合二：id唯一索引-RC" class="headerlink" title="组合二：id唯一索引+RC"></a><strong>组合二：id唯一索引+RC</strong></h3><p>id不是主键，而是一个Unique的二级索引键值。那么在RC隔离级别下，delete from t1 where id = 10; 需要加什么锁呢？见下图： <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFaaAAuTTAACTl8kxySw303.jpg" alt="id唯一索引+RC"></p>
+<p>此组合中，id是unique索引，而主键是name列。此时，加锁的情况由于组合一有所不同。由于id是unique索引，因此delete语句会选择走id列的索引进行where条件的过滤，在找到id=10的记录后，首先会将unique索引上的id=10索引记录加上X锁，同时，会根据读取到的name列，回主键索引(聚簇索引)，然后将聚簇索引上的name = ‘d’ 对应的主键索引项加X锁。为什么聚簇索引上的记录也要加锁？试想一下，如果并发的一个SQL，是通过主键索引来更新：update t1 set id = 100 where name = ‘d’; 此时，如果delete语句没有将主键索引上的记录加锁，那么并发的update就会感知不到delete语句的存在，违背了同一记录上的更新/删除需要串行执行的约束。</p>
+<p><strong>结论：</strong> 若id列是unique列，其上有unique索引。那么SQL需要加两个X锁，一个对应于id unique索引上的id = 10的记录，另一把锁对应于聚簇索引上的[name=’d’,id=10]的记录。</p>
+<h3 id="组合三：id非唯一索引-RC"><a href="#组合三：id非唯一索引-RC" class="headerlink" title="组合三：id非唯一索引+RC"></a><strong>组合三：id非唯一索引+RC</strong></h3><p>id列上的约束相比组合一、二 又降低了，id不再是唯一列，只有一个普通索引。假设delete from t1 where id = 10; 语句，仍旧选择id列上的索引进行过滤where条件，那么此时会持有哪些锁？同样见下图： <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFm2AHi6yAACXA5-E1HY180.jpg" alt="id非唯一索引+RC"></p>
+<p>可以看出，首先，id列索引上，满足id=10的查询条件的记录，均已加上锁。同时，这些记录对应的主键索引上的记录也都加上所。与组合二唯一的区别在于，组合二最多只有一个满足等值查询的记录，二组合三会将所有满足查询的记录都加锁。</p>
+<p><strong>结论：</strong> 若id列上有非唯一索引，那么对应的所有满足SQL查询条件的记录，都会被加锁。同时，这些记录在主键索引上的记录，也会被加锁。</p>
+<h3 id="组合四：id无索引-RC"><a href="#组合四：id无索引-RC" class="headerlink" title="组合四：id无索引+RC"></a><strong>组合四：id无索引+RC</strong></h3><p>相对于前面三个组合，这是一个比较特殊的情况。id列上没有索引，where id = 10;这个过滤条件，没法通过索引进行过滤，那么只能走全表扫描做过滤。对应于这个组合，SQL会加什么锁？或者是换句话说，全表扫描时，会加什么锁？这个答案也有很多：有人说会在表上加X锁；有人说会将聚簇索引上，选择出来的id = 10;的记录加上X锁。那么实际情况呢？请看下图： <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1eFxaAHv5CAACbIC-obTo771.jpg" alt="id无索引+RC"></p>
+<p>由于id列上没有索引，因此只能走聚簇索引，进行全部扫描。从图中可以看到，满足删除条件的记录有两条，但是，聚簇索引上所有的记录，都被加上了X锁。无论记录是否满足条件，全部被加上X锁。既不是加表锁，也不是在满足条件的记录上加行锁。</p>
+<p>有人可能会问？为什么不是只在满足条件的记录上加锁呢？这是由于MySQL的实现决定的。如果一个条件无法通过索引快速过滤，那么存储引擎层面就会将所有记录加锁后返回，然后由MySQL Server层进行过滤。因此也就把所有的记录，都锁上了。</p>
+<p><strong>注：</strong> 在实际的实现中，MySQL有一些改进，在MySQL Server过滤条件，发现不满足后，会调用unlock_row方法，把不满足条件的记录放锁 (违背了2PL的约束)。这样做，保证了最后只会持有满足条件记录上的锁，但是每条记录的加锁操作还是不能省略的。</p>
+<p><strong>结论：</strong> 若id列上没有索引，SQL会走聚簇索引的全扫描进行过滤，由于过滤是由MySQL Server层面进行的。因此每条记录，无论是否满足条件，都会被加上X锁。但是，为了效率考量，MySQL做了优化，对于不满足条件的记录，会在判断后放锁，最终持有的，是满足条件的记录上的锁，但是不满足条件的记录上的加锁/放锁动作不会省略。同时，优化也违背了2PL的约束。</p>
+<hr>
+<h3 id="组合五：id主键-RR"><a href="#组合五：id主键-RR" class="headerlink" title="组合五：id主键+RR"></a><strong>组合五：id主键+RR</strong></h3><p>上面的四个组合，都是在Read Committed隔离级别下的加锁行为，接下来的四个组合，是在Repeatable Read隔离级别下的加锁行为。 组合五，id列是主键列，Repeatable Read隔离级别，针对delete from t1 where id = 10; 这条SQL，加锁与组合一：[id主键，Read Committed]一致。</p>
+<h3 id="组合六：id唯一索引-RR"><a href="#组合六：id唯一索引-RR" class="headerlink" title="组合六：id唯一索引+RR"></a><strong>组合六：id唯一索引+RR</strong></h3><p>与组合五类似，组合六的加锁，与组合二：[id唯一索引，Read Committed]一致。两个X锁，id唯一索引满足条件的记录上一个，对应的聚簇索引上的记录一个。</p>
+<h3 id="组合七：id非唯一索引-RR"><a href="#组合七：id非唯一索引-RR" class="headerlink" title="组合七：id非唯一索引+RR"></a><strong>组合七：id非唯一索引+RR</strong></h3><p>是否记得上面所提的隔离级别，RC隔离级别允许幻读，而RR隔离级别不允许幻读。如果对脏读、幻读、可重复度等不清楚的话，有空再来写关于这几个读的区别。</p>
+<p>现在简单说下幻读：如果一个事务第一次进行当前读id=10读取到三条数据，第二次进行当前读之前，其他事物插入了一条id=10的数据，第二次当前读id=10就会有四条数据，这就是幻读，就好像第一次出现了幻觉，第二次明明是四条，第一次怎么是三条？</p>
+<p>组合七，Repeatable Read隔离级别，id上有一个非唯一索引，执行delete from t1 where id = 10; 假设选择id列上的索引进行条件过滤，最后的加锁行为，是怎么样的呢？同样看下面这幅图: <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1eGTiABq3wAACP_3bsPjw465.jpg" alt="id非唯一索引+RR"></p>
+<p>此图，相对于组合三：[id列上非唯一锁，Read Committed]看似相同，其实却有很大的区别。最大的区别在于，这幅图中多了一个GAP锁，而且GAP锁看起来也不是加在记录上的，倒像是加载两条记录之间的位置，GAP锁有何用？</p>
+<p><strong>注：</strong> GAP锁也叫间隙锁，有空再解释</p>
+<p>其实这个多出来的GAP锁，就是RR隔离级别，相对于RC隔离级别，不会出现幻读的关键。确实，GAP锁锁住的位置，也不是记录本身，而是两条记录之间的GAP。所谓幻读，就是同一个事务，连续做两次当前读 (例如：select * from t1 where id = 10 for update;)，那么这两次当前读返回的是完全相同的记录 (记录数量一致，记录本身也一致)，第二次的当前读，不会比第一次返回更多的记录 (幻象)。</p>
+<p>如何保证两次当前读返回一致的记录，那就需要在第一次当前读与第二次当前读之间，其他的事务不会插入新的满足条件的记录并提交。为了实现这个功能，GAP锁应运而生。</p>
+<p>如图中所示，有哪些位置可以插入新的满足条件的项 (id = 10)，考虑到B+树索引的有序性，满足条件的项一定是连续存放的。记录[6,c]之前，不会插入id=10的记录；[6,c]与[10,b]间可以插入[10, aa] <strong>(注意,这里的间隙锁锁住了id=7,8,9,10,如果插入id为6和11的数据是可以的)</strong> ；[10,b]与[10,d]间，可以插入新的[10,bb],[10,c]等；[10,d]与[11,f]间可以插入满足条件的[10,e],[10,z]等；而[11,f]之后也不会插入满足条件的记录。因此，为了保证[6,c]与[10,b]间，[10,b]与[10,d]间，[10,d]与[11,f]不会插入新的满足条件的记录，MySQL选择了用GAP锁，将这三个GAP给锁起来。</p>
+<p>Insert操作，如insert [10,aa]，首先会定位到[6,c]与[10,b]间，然后在插入前，会检查这个GAP是否已经被锁上，如果被锁上，则Insert不能插入记录。因此，通过第一遍的当前读，不仅将满足条件的记录锁上 (X锁)，与组合三类似。同时还是增加3把GAP锁，将可能插入满足条件记录的3个GAP给锁上，保证后续的Insert不能插入新的id=10的记录，也就杜绝了同一事务的第二次当前读，出现幻象的情况。</p>
+<blockquote>
+<p>现在有个问题：为什么组合五、六不加GAP锁？<br>答案很简单，因为组合五、六只会查出一条数据，不存在查询出多条的情况，所以不需要GAP锁</p>
+</blockquote>
+<blockquote>
+<p>再来个问题：如果组合五、六中进行当前读：<br>select * from user where id = 8 for update<br>但是id=8的数据并不存在，那么GAP锁会不会出来现？</p>
+</blockquote>
+<p>下面用实验来说明<br><strong>组合五，id为主键，RR隔离级别</strong><br>Client A</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span>;</span><br><span class="line">- 结果</span><br><span class="line">| id | name |</span><br><span class="line">|  3 | zz   |</span><br><span class="line">|  6 | e    |</span><br><span class="line">| 10 | b    |</span><br><span class="line">| 11 | d    |</span><br><span class="line">| 13 | z    |</span><br><span class="line"></span><br><span class="line">-关闭自动提交事务</span><br><span class="line"><span class="keyword">set</span> autocommit = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">8</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Client B</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span>(<span class="keyword">id</span>,<span class="keyword">name</span>) <span class="keyword">values</span>(<span class="number">7</span>,<span class="string">'f'</span>); - success</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span>(<span class="keyword">id</span>,<span class="keyword">name</span>) <span class="keyword">values</span>(<span class="number">8</span>,<span class="string">'f'</span>); - blocked</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span>(<span class="keyword">id</span>,<span class="keyword">name</span>) <span class="keyword">values</span>(<span class="number">9</span>,<span class="string">'f'</span>); - success</span><br></pre></td></tr></table></figure>
+
+<p>Client A</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">commit</span>;</span><br></pre></td></tr></table></figure>
+
+<p>可以发现锁的范围是id:[7,9]<br><strong>组合六，id为唯一索引，RR隔离级别</strong><br>Client A</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span>;</span><br><span class="line">- 结果</span><br><span class="line">| id | name |</span><br><span class="line">|  3 | zz   |</span><br><span class="line">|  6 | e    |</span><br><span class="line">| 10 | b    |</span><br><span class="line">| 11 | d    |</span><br><span class="line">| 13 | z    |</span><br><span class="line"></span><br><span class="line">-关闭自动提交事务</span><br><span class="line"><span class="keyword">set</span> autocommit = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">8</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Client B</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span>(<span class="keyword">id</span>,<span class="keyword">name</span>) <span class="keyword">values</span>(<span class="number">7</span>,<span class="string">'f'</span>); - blocked</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span>(<span class="keyword">id</span>,<span class="keyword">name</span>) <span class="keyword">values</span>(<span class="number">8</span>,<span class="string">'f'</span>); - blocked</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span>(<span class="keyword">id</span>,<span class="keyword">name</span>) <span class="keyword">values</span>(<span class="number">9</span>,<span class="string">'f'</span>); - blocked</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span>(<span class="keyword">id</span>,<span class="keyword">name</span>) <span class="keyword">values</span>(<span class="number">5</span>,<span class="string">'f'</span>); - success</span><br></pre></td></tr></table></figure>
+
+<p>Client A</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">commit</span>;</span><br></pre></td></tr></table></figure>
+
+<p>可以发现锁的范围是id:[7-9]</p>
+<p><strong>总结：</strong> 当id为聚簇索引（主键）时和当id为唯一索引时进行当前读不存在的数据，就会来个GAP锁，锁住一个范围</p>
+<blockquote>
+<p>现在在又一个问题：<br>在当前组合id非唯一索引+RR，如果select * from test where id = 8 for update,id=8的数据并不存在</p>
+</blockquote>
+<p>实验分析： Client A：关闭事务自动提交</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span>;</span><br><span class="line">- 结果</span><br><span class="line">| id | name |</span><br><span class="line">|  3 | zz   |</span><br><span class="line">|  6 | e    |</span><br><span class="line">| 10 | b    |</span><br><span class="line">| 11 | d    |</span><br><span class="line">| 13 | z    |</span><br><span class="line"><span class="keyword">set</span> autocommit = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">8</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Client B：自动提交事务的</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">7</span>/<span class="number">8</span>/<span class="number">9</span> <span class="keyword">for</span> <span class="keyword">update</span>; -返回空，并不blocked</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> &gt; <span class="number">6</span> <span class="keyword">for</span> <span class="keyword">update</span>; -返回空，并不blocked</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> &lt; <span class="number">11</span> <span class="keyword">for</span> <span class="keyword">update</span>; -返回空，并不blocked</span><br><span class="line"><span class="keyword">delete</span> <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">7</span>/<span class="number">8</span>/<span class="number">9</span>; -直接返回删除成功，这三条数据本来就不存在</span><br><span class="line"><span class="keyword">update</span> <span class="keyword">test</span> <span class="keyword">set</span> <span class="keyword">name</span>=<span class="string">'bb'</span> <span class="keyword">where</span> <span class="keyword">id</span> =<span class="number">7</span>/<span class="number">8</span>/<span class="number">9</span>; -直接返回更新成功，但是这些数据并不存在</span><br><span class="line"></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span> <span class="keyword">values</span>(<span class="number">7</span>/<span class="number">8</span>/<span class="number">9</span>,<span class="string">'aaa'</span>); -blocked</span><br><span class="line"></span><br><span class="line">-可以看出，我们同样用<span class="keyword">select</span> <span class="keyword">for</span> <span class="keyword">update</span>查询<span class="number">7</span>、<span class="number">8</span>、<span class="number">9</span>是不会被阻塞的，<span class="keyword">delete</span>、updater操作不存在的数据同样也不会被阻塞</span><br><span class="line">-可是之前不是说了<span class="keyword">select</span> <span class="keyword">for</span> <span class="keyword">update</span>会加X锁吗？</span><br><span class="line">-仅仅是使用<span class="keyword">Insert</span>等语句就会被阻塞</span><br><span class="line">-所以我们给个假设：如果<span class="keyword">select</span> <span class="keyword">for</span> <span class="keyword">update</span>查询不存在的索引，加的不是X锁，而是S锁</span><br><span class="line">-下面继续实验，</span><br></pre></td></tr></table></figure>
+
+<p>Client A</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span> <span class="keyword">values</span>(<span class="number">8</span>,<span class="string">'aaa'</span>);</span><br></pre></td></tr></table></figure>
+
+<p>Client B</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">8</span> <span class="keyword">for</span> <span class="keyword">update</span>; -blocked</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">7</span> <span class="keyword">for</span> <span class="keyword">update</span>; -返回空</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">9</span> <span class="keyword">for</span> <span class="keyword">update</span>; -返回空</span><br><span class="line"></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span> <span class="keyword">values</span>(<span class="number">7</span>,<span class="string">'aaa'</span>); -blocked</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span> <span class="keyword">values</span>(<span class="number">8</span>,<span class="string">'aaa'</span>); -blocked</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span> <span class="keyword">values</span>(<span class="number">9</span>,<span class="string">'aaa'</span>); -blocked</span><br><span class="line">-当A插入了id=8的数据后，id=8的数据立即被锁定：X锁</span><br><span class="line">-到这里，我们在补充下上面的假设</span><br><span class="line">-如果<span class="keyword">select</span> <span class="keyword">for</span> <span class="keyword">update</span>查询不存在的索引，加的不是X锁，而是S锁</span><br><span class="line">-如果<span class="keyword">insert</span>这条不存在的数据后，这条数据会立刻被<span class="keyword">insert</span>的客户端加以X锁以替代S锁</span><br></pre></td></tr></table></figure>
+
+<p>Client A</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">commit</span>;</span><br><span class="line"><span class="keyword">set</span> autocommit = <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+
+<p>现在我们来证明下刚才的假设<br><strong>如果select for update查询不存在的索引，加的不是X锁，而是S锁，如果A客户端insert这条不存在的数据后，这条数据会立刻被insert的客户端加以X锁以替代S锁</strong></p>
+<p>实验：恢复数据，将刚刚插入的id=8的数据删掉，重新实验<br>Client A ：关闭事务自动提交</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">set</span> autocommit = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">8</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Client B ：关闭事务自动提交</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">set</span> autocommit = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">8</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Client A ：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> <span class="keyword">test</span> <span class="keyword">values</span>(<span class="number">8</span>,<span class="string">'aaa'</span>); -blocked</span><br><span class="line">-进入阻塞了！！！前半段的假设成立了</span><br><span class="line">-如果<span class="keyword">select</span> <span class="keyword">for</span> <span class="keyword">update</span>查询不存在的索引，加的不是X锁，而是S锁</span><br></pre></td></tr></table></figure>
+
+<p>Client B：在上面A超时前提交事务</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">commit</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Client A数据插入成功，此时B再来尝试当前度id=8的数据<br>Client B</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">8</span> <span class="keyword">for</span> <span class="keyword">update</span>; - blocked</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">test</span> <span class="keyword">where</span> <span class="keyword">id</span> = <span class="number">7</span> <span class="keyword">for</span> <span class="keyword">update</span>; -返回空</span><br></pre></td></tr></table></figure>
+
+<p>假设完全成立了。B会被阻塞，说明A对id=8的数据加以X锁， 但是对于id=7这个不存在的数据，是能够读取的，仍然是S锁.</p>
+<p><strong>在id为非唯一索引，RR隔离级别下，如果select for update查询不存在的索引，加的GAP锁不是X锁类型的，而是S锁类型的，如果A客户端insert这条不存在的数据后，这条数据会立刻被insert的客户端加以X锁以替代S锁，简单来说，GAP对于不存在的数据加的是S锁，对存在的数据加的是X锁</strong><br><strong>如果是使用delete和update语句操作不存在的id数据项，会直接操作成功，因为本来就没什么好操作的</strong></p>
+<p>结论：Repeatable Read隔离级别下，id列上有一个非唯一索引，对应SQL：delete from t1 where id = 10; 首先，通过id索引定位到第一条满足查询条件的记录，加记录上的X锁，加GAP上的GAP锁，然后加主键聚簇索引上的记录X锁，然后返回；然后读取下一条，重复进行。直至进行到第一条不满足条件的记录[11,f]，此时，不需要加记录X锁，但是仍旧需要加GAP锁，最后返回结束。</p>
+<h3 id="组合八：id无索引-RR"><a href="#组合八：id无索引-RR" class="headerlink" title="**组合八：id无索引+RR"></a><strong>**组合八：id无索引+RR</strong></h3><p>组合八，Repeatable Read隔离级别下的最后一种情况，id列上没有索引。此时SQL：delete from t1 where id = 10; 没有其他的路径可以选择，只能进行全表扫描。最终的加锁情况，如下图所示： <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1eHwGAZlqXAAC8aV4ARTs433.jpg" alt="id无索引+RR"></p>
+<p>如图，这是一个很恐怖的现象。首先，聚簇索引上的所有记录，都被加上了X锁。其次，聚簇索引每条记录间的间隙(GAP)，也同时被加上了GAP锁。这个示例表，只有6条记录，一共需要6个记录锁，7个GAP锁。试想，如果表上有1000万条记录呢？</p>
+<p>在这种情况下，这个表上，除了不加锁的快照度，其他任何加锁的并发SQL，均不能执行，不能更新，不能删除，不能插入，全表被锁死。</p>
+<p>当然，跟组合四：[id无索引, Read Committed]类似，这个情况下，MySQL也做了一些优化，就是所谓的semi-consistent read。semi-consistent read开启的情况下，对于不满足查询条件的记录，MySQL会提前放锁。针对上面的这个用例，就是除了记录[d,10]，[g,10]之外，所有的记录锁都会被释放，同时不加GAP锁。semi-consistent read如何触发：要么是read committed隔离级别；要么是Repeatable Read隔离级别，同时设置了 innodb_locks_unsafe_for_binlog 参数。</p>
+<p>结论：在Repeatable Read隔离级别下，如果进行全表扫描的当前读，那么会锁上表中的所有记录，同时会锁上聚簇索引内的所有GAP，杜绝所有的并发 更新/删除/插入 操作。当然，也可以通过触发semi-consistent read，来缓解加锁开销与并发影响，但是semi-consistent read本身也会带来其他问题，不建议使用。</p>
+<h3 id="组合九：Serializable"><a href="#组合九：Serializable" class="headerlink" title="组合九：Serializable"></a><strong>组合九：Serializable</strong></h3><p>针对前面提到的简单的SQL，最后一个情况：Serializable隔离级别。对于SQL2：delete from t1 where id = 10; 来说，Serializable隔离级别与Repeatable Read隔离级别完全一致，因此不做介绍。 Serializable隔离级别，影响的是SQL1：select * from t1 where id = 10; 这条SQL，在RC，RR隔离级别下，都是快照读，不加锁。但是在Serializable隔离级别，SQL1会加读锁，也就是说快照读不复存在，MVCC并发控制降级为Lock-Based CC。 结论：在MySQL/InnoDB中，所谓的读不加锁，并不适用于所有的情况，而是隔离级别相关的。Serializable隔离级别，读不加锁就不再成立，所有的读操作，都是当前读。</p>
+<h3 id="四、死锁原理与分析"><a href="#四、死锁原理与分析" class="headerlink" title="四、死锁原理与分析"></a><strong>四、死锁原理与分析</strong></h3><p>本文前面的部分，基本上已经涵盖了MySQL/InnoDB所有的加锁规则。深入理解MySQL如何加锁，有两个比较重要的作用：</p>
+<ul>
+<li>可以根据MySQL的加锁规则，写出不会发生死锁的SQL；</li>
+</ul>
+<ul>
+<li>可以根据MySQL的加锁规则，定位出线上产生死锁的原因；</li>
+</ul>
+<p>下面，来看看两个死锁的例子 (一个是两个Session的两条SQL产生死锁；另一个是两个Session的一条SQL，产生死锁)：</p>
+<p><a href="http://officialblog-wordpress.stor.sinaapp.com/uploads/2013/12/medish-10.jpg" target="_blank" rel="noopener"><img src="http://officialblog-wordpress.stor.sinaapp.com/uploads/2013/12/medish-10.jpg" alt="medish (10)"></a></p>
+<p><a href="http://officialblog-wordpress.stor.sinaapp.com/uploads/2013/12/medish-11.jpg" target="_blank" rel="noopener"><img src="http://officialblog-wordpress.stor.sinaapp.com/uploads/2013/12/medish-11.jpg" alt="medish (11)"></a></p>
+<p>上面的两个死锁用例。第一个非常好理解，也是最常见的死锁，每个事务执行两条SQL，分别持有了一把锁，然后加另一把锁，产生死锁。</p>
+<p>第二个用例，虽然每个Session都只有一条语句，仍旧会产生死锁。要分析这个死锁，首先必须用到本文前面提到的MySQL加锁的规则。针对Session 1，从name索引出发，读到的[hdc, 1]，[hdc, 6]均满足条件，不仅会加name索引上的记录X锁，而且会加聚簇索引上的记录X锁，加锁顺序为先[1,hdc,100]，后[6,hdc,10]。而Session 2，从pubtime索引出发，[10,6],[100,1]均满足过滤条件，同样也会加聚簇索引上的记录X锁，加锁顺序为[6,hdc,10]，后[1,hdc,100]。发现没有，跟Session 1的加锁顺序正好相反，如果两个Session恰好都持有了第一把锁，请求加第二把锁，死锁就发生了。</p>
+<p><strong>结论：</strong>死锁的发生与否，并不在于事务中有多少条SQL语句，<strong>死锁的关键在于</strong>：两个(或以上)的Session<strong>加锁的顺序</strong>不一致。而使用本文上面提到的，分析MySQL每条SQL语句的加锁规则，分析出每条语句的加锁顺序，然后检查多个并发SQL间是否存在以相反的顺序加锁的情况，就可以分析出各种潜在的死锁情况，也可以分析出线上死锁发生的原因。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/mysql/" rel="tag"># mysql</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/09/当前读与快照读的区别/" rel="next" title="当前读与快照读的区别">
+                <i class="fa fa-chevron-left"></i> 当前读与快照读的区别
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/10/11/spring事务的传播行为/" rel="prev" title="spring事务的传播行为">
+                spring事务的传播行为 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">pan tao</p>
+              <p class="site-description motion-element" itemprop="description">这个人有点东西</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#索引和锁的分析"><span class="nav-number">1.</span> <span class="nav-text">索引和锁的分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#再补充一点前提"><span class="nav-number">1.1.</span> <span class="nav-text">再补充一点前提</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2PL：Two-Phase-Locking"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.2PL：Two-Phase Locking</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Isolation-Level（事务级别）"><span class="nav-number">1.2.</span> <span class="nav-text">2.Isolation Level（事务级别）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#简单SQL的加锁实现分析"><span class="nav-number">1.3.</span> <span class="nav-text">简单SQL的加锁实现分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#组合一：id主键-RC"><span class="nav-number">1.3.1.</span> <span class="nav-text">组合一：id主键+RC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合二：id唯一索引-RC"><span class="nav-number">1.3.2.</span> <span class="nav-text">组合二：id唯一索引+RC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合三：id非唯一索引-RC"><span class="nav-number">1.3.3.</span> <span class="nav-text">组合三：id非唯一索引+RC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合四：id无索引-RC"><span class="nav-number">1.3.4.</span> <span class="nav-text">组合四：id无索引+RC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合五：id主键-RR"><span class="nav-number">1.3.5.</span> <span class="nav-text">组合五：id主键+RR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合六：id唯一索引-RR"><span class="nav-number">1.3.6.</span> <span class="nav-text">组合六：id唯一索引+RR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合七：id非唯一索引-RR"><span class="nav-number">1.3.7.</span> <span class="nav-text">组合七：id非唯一索引+RR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合八：id无索引-RR"><span class="nav-number">1.3.8.</span> <span class="nav-text">**组合八：id无索引+RR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组合九：Serializable"><span class="nav-number">1.3.9.</span> <span class="nav-text">组合九：Serializable</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四、死锁原理与分析"><span class="nav-number">1.3.10.</span> <span class="nav-text">四、死锁原理与分析</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pan tao</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
