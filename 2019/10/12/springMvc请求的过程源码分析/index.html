@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="springMvc,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="blog" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="DispatcherServlet是springMvc中的一个关键角色,被称为中央调度器,每个请求都要经过该Servlet的如下方法(至至原生的Servlet在后面会讲解)doPatcher()方法:所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理. 执行的步骤:1.对请求进行判断,是否为mutilpart请求2.寻找对应的处理器映射器(HandleMapping),并且和执行器链包装">
+<meta name="keywords" content="springMvc">
+<meta property="og:type" content="article">
+<meta property="og:title" content="springMvc请求的过程源码分析">
+<meta property="og:url" content="http://Homeofpan.github.io/2019/10/12/springMvc请求的过程源码分析/index.html">
+<meta property="og:site_name" content="blog">
+<meta property="og:description" content="DispatcherServlet是springMvc中的一个关键角色,被称为中央调度器,每个请求都要经过该Servlet的如下方法(至至原生的Servlet在后面会讲解)doPatcher()方法:所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理. 执行的步骤:1.对请求进行判断,是否为mutilpart请求2.寻找对应的处理器映射器(HandleMapping),并且和执行器链包装">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-10-13T07:31:44.170Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="springMvc请求的过程源码分析">
+<meta name="twitter:description" content="DispatcherServlet是springMvc中的一个关键角色,被称为中央调度器,每个请求都要经过该Servlet的如下方法(至至原生的Servlet在后面会讲解)doPatcher()方法:所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理. 执行的步骤:1.对请求进行判断,是否为mutilpart请求2.寻找对应的处理器映射器(HandleMapping),并且和执行器链包装">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://Homeofpan.github.io/2019/10/12/springMvc请求的过程源码分析/">
+
+
+
+
+
+  <title>springMvc请求的过程源码分析 | blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://Homeofpan.github.io/2019/10/12/springMvc请求的过程源码分析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pan tao">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">springMvc请求的过程源码分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-12T19:28:40+08:00">
+                2019-10-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ssm/" itemprop="url" rel="index">
+                    <span itemprop="name">ssm</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="DispatcherServlet是springMvc中的一个关键角色-被称为中央调度器-每个请求都要经过该Servlet的如下方法-至至原生的Servlet在后面会讲解"><a href="#DispatcherServlet是springMvc中的一个关键角色-被称为中央调度器-每个请求都要经过该Servlet的如下方法-至至原生的Servlet在后面会讲解" class="headerlink" title="DispatcherServlet是springMvc中的一个关键角色,被称为中央调度器,每个请求都要经过该Servlet的如下方法(至至原生的Servlet在后面会讲解)"></a>DispatcherServlet是springMvc中的一个关键角色,被称为中央调度器,每个请求都要经过该Servlet的如下方法(至至原生的Servlet在后面会讲解)</h3><h3 id="doPatcher-方法"><a href="#doPatcher-方法" class="headerlink" title="doPatcher()方法:"></a>doPatcher()方法:</h3><h3 id="所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理"><a href="#所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理" class="headerlink" title="所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理."></a>所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理.</h3><blockquote>
+<h3 id="执行的步骤"><a href="#执行的步骤" class="headerlink" title="执行的步骤:"></a>执行的步骤:</h3><h3 id="1-对请求进行判断-是否为mutilpart请求"><a href="#1-对请求进行判断-是否为mutilpart请求" class="headerlink" title="1.对请求进行判断,是否为mutilpart请求"></a>1.对请求进行判断,是否为mutilpart请求</h3><h3 id="2-寻找对应的处理器映射器-HandleMapping-并且和执行器链包装成一个HandlerExecutionChain返回"><a href="#2-寻找对应的处理器映射器-HandleMapping-并且和执行器链包装成一个HandlerExecutionChain返回" class="headerlink" title="2.寻找对应的处理器映射器(HandleMapping),并且和执行器链包装成一个HandlerExecutionChain返回"></a>2.寻找对应的处理器映射器(HandleMapping),并且和执行器链包装成一个HandlerExecutionChain返回</h3><h3 id="3-根据handler来遍历寻找对应的处理器适配器-HandlerAdapter"><a href="#3-根据handler来遍历寻找对应的处理器适配器-HandlerAdapter" class="headerlink" title="3.根据handler来遍历寻找对应的处理器适配器(HandlerAdapter)"></a>3.根据handler来遍历寻找对应的处理器适配器(HandlerAdapter)</h3><h3 id="3-执行拦截器的preHandle方法"><a href="#3-执行拦截器的preHandle方法" class="headerlink" title="3.执行拦截器的preHandle方法"></a>3.执行拦截器的preHandle方法</h3><h3 id="4-执行处理器方法-得到一个ModelAndView对象"><a href="#4-执行处理器方法-得到一个ModelAndView对象" class="headerlink" title="4.执行处理器方法,得到一个ModelAndView对象"></a>4.执行处理器方法,得到一个ModelAndView对象</h3><h3 id="5-根据处理器返回结果来设置ViewName-也就是解析出View视图"><a href="#5-根据处理器返回结果来设置ViewName-也就是解析出View视图" class="headerlink" title="5.根据处理器返回结果来设置ViewName,也就是解析出View视图"></a>5.根据处理器返回结果来设置ViewName,也就是解析出View视图</h3><h3 id="6-执行拦截器的postHandle方法"><a href="#6-执行拦截器的postHandle方法" class="headerlink" title="6.执行拦截器的postHandle方法"></a>6.执行拦截器的postHandle方法</h3><h3 id="7-对mv对象进行一些处理-查看是否存在异常情况-如果出现则使用异常解析器进行相关的处理"><a href="#7-对mv对象进行一些处理-查看是否存在异常情况-如果出现则使用异常解析器进行相关的处理" class="headerlink" title="7.对mv对象进行一些处理,查看是否存在异常情况,如果出现则使用异常解析器进行相关的处理"></a>7.对mv对象进行一些处理,查看是否存在异常情况,如果出现则使用异常解析器进行相关的处理</h3><h3 id="8-调用拦截器的afterCompletion方法"><a href="#8-调用拦截器的afterCompletion方法" class="headerlink" title="8.调用拦截器的afterCompletion方法"></a>8.调用拦截器的afterCompletion方法</h3></blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Process the actual dispatching to the handler.</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;The handler will be obtained by applying the servlet's HandlerMappings in order.</span></span><br><span class="line"><span class="comment"> * The HandlerAdapter will be obtained by querying the servlet's installed HandlerAdapters</span></span><br><span class="line"><span class="comment"> * to find the first that supports the handler class.</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;All HTTP methods are handled by this method. It's up to HandlerAdapters or handlers</span></span><br><span class="line"><span class="comment"> * themselves to decide which methods are acceptable.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> request current HTTP request</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> response current HTTP response</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@throws</span> Exception in case of any kind of processing failure</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doDispatch</span><span class="params">(HttpServletRequest request, HttpServletResponse response)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">//先保留一份进来的请求,因为后面用来判断是否是Mutipart请求</span></span><br><span class="line">	HttpServletRequest processedRequest = request;</span><br><span class="line">        <span class="comment">//定义执行器链,这个类包装了handlemapping在里面</span></span><br><span class="line">	HandlerExecutionChain mappedHandler = <span class="keyword">null</span>;</span><br><span class="line">        <span class="comment">//标志是否为MultipartRequest</span></span><br><span class="line">	<span class="keyword">boolean</span> multipartRequestParsed = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">	WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		ModelAndView mv = <span class="keyword">null</span>;</span><br><span class="line">		Exception dispatchException = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">//这里真正判断是否为MultipartRequest</span></span><br><span class="line">			processedRequest = checkMultipart(request);</span><br><span class="line">			multipartRequestParsed = (processedRequest != request);</span><br><span class="line"></span><br><span class="line">			<span class="comment">// Determine handler for the current request.</span></span><br><span class="line">                <span class="comment">// 获取Request对应的处理器映射器</span></span><br><span class="line">			mappedHandler = getHandler(processedRequest);</span><br><span class="line">			<span class="keyword">if</span> (mappedHandler == <span class="keyword">null</span> || mappedHandler.getHandler() == <span class="keyword">null</span>) &#123;</span><br><span class="line">				noHandlerFound(processedRequest, response);</span><br><span class="line">				<span class="keyword">return</span>;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="comment">// Determine handler adapter for the current request.</span></span><br><span class="line">                <span class="comment">//能执行到这里需要找到对应的handle</span></span><br><span class="line">                <span class="comment">//根据上面的方法匹配到的handle来找到对应的处理器适配器</span></span><br><span class="line">			HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());</span><br><span class="line"></span><br><span class="line">			<span class="comment">// Process last-modified header, if supported by the handler.</span></span><br><span class="line">			String method = request.getMethod();</span><br><span class="line">			<span class="keyword">boolean</span> isGet = <span class="string">"GET"</span>.equals(method);</span><br><span class="line">			<span class="keyword">if</span> (isGet || <span class="string">"HEAD"</span>.equals(method)) &#123;</span><br><span class="line">				<span class="keyword">long</span> lastModified = ha.getLastModified(request, mappedHandler.getHandler());</span><br><span class="line">				<span class="keyword">if</span> (logger.isDebugEnabled()) &#123;</span><br><span class="line">					logger.debug(<span class="string">"Last-Modified value for ["</span> + getRequestUri(request) + <span class="string">"] is: "</span> + lastModified);</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="keyword">if</span> (<span class="keyword">new</span> ServletWebRequest(request, response).checkNotModified(lastModified) &amp;&amp; isGet) &#123;</span><br><span class="line">					<span class="keyword">return</span>;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">                <span class="comment">//执行拦截器的PreHandle方法()</span></span><br><span class="line">                <span class="comment">//由此可见,该方法在处理器执行之前执行,并且return false之后就不会执行处理器方法</span></span><br><span class="line">			<span class="keyword">if</span> (!mappedHandler.applyPreHandle(processedRequest, response)) &#123;</span><br><span class="line">				<span class="keyword">return</span>;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="comment">// Actually invoke the handler.</span></span><br><span class="line">                <span class="comment">//真正执行Handler对应的方法,并且返回ModelAndView</span></span><br><span class="line">			mv = ha.handle(processedRequest, response, mappedHandler.getHandler());</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (asyncManager.isConcurrentHandlingStarted()) &#123;</span><br><span class="line">				<span class="keyword">return</span>;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">                <span class="comment">//判断mv中是否设置了viewName,如果没有就默认帮你设置</span></span><br><span class="line">			applyDefaultViewName(processedRequest, mv);</span><br><span class="line">                <span class="comment">//执行拦截器的postHandle方法(拦截处理程序的执行。在HandlerAdapter实际调用处理程序之后调                  // 用，但是在DispatcherServlet呈现视图之前调用。)</span></span><br><span class="line">			mappedHandler.applyPostHandle(processedRequest, response, mv);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">			dispatchException = ex;</span><br><span class="line">		&#125;</span><br><span class="line">            <span class="comment">//对handler执行方法完成之后返回的结果进行处理,针对返回ModelAndView和异常的发生</span></span><br><span class="line">            <span class="comment">//这个方法的最后一步是对前面拦截器的PostHandle方法成功的拦截器进行回调,去执行拦截器</span></span><br><span class="line">            <span class="comment">//的另一个方法afterCompletion</span></span><br><span class="line">		processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">		triggerAfterCompletion(processedRequest, response, mappedHandler, ex);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">catch</span> (Error err) &#123;</span><br><span class="line">		triggerAfterCompletionWithError(processedRequest, response, mappedHandler, err);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">finally</span> &#123;</span><br><span class="line">		<span class="keyword">if</span> (asyncManager.isConcurrentHandlingStarted()) &#123;</span><br><span class="line">			<span class="comment">// Instead of postHandle and afterCompletion</span></span><br><span class="line">			<span class="keyword">if</span> (mappedHandler != <span class="keyword">null</span>) &#123;</span><br><span class="line">				mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">// Clean up any resources used by a multipart request.</span></span><br><span class="line">			<span class="keyword">if</span> (multipartRequestParsed) &#123;</span><br><span class="line">				cleanupMultipart(processedRequest);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="获取处理器映射器的方法-最终返回的是与处理器执行链的包装对象"><a href="#获取处理器映射器的方法-最终返回的是与处理器执行链的包装对象" class="headerlink" title="获取处理器映射器的方法(最终返回的是与处理器执行链的包装对象)"></a>获取处理器映射器的方法(最终返回的是与处理器执行链的包装对象)</h3><h3 id="getHandle-方法"><a href="#getHandle-方法" class="headerlink" title="getHandle()方法:"></a>getHandle()方法:</h3><p>​     1.遍历一个有所有HandleMapping的List: List<handlermapping> handlerMappings;</handlermapping></p>
+<p>​        HandleMapping是一个接口有许多的实现,根据不同的情况来选择不同的处理器映射器</p>
+<p>​     2.一个HandMapping中许多个Handle,要根据url来寻找对应的Handle</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Return the HandlerExecutionChain for this request.</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;Tries all handler mappings in order.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> request current HTTP request</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> the HandlerExecutionChain, or &#123;<span class="doctag">@code</span> null&#125; if no handler could be found</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> HandlerExecutionChain <span class="title">getHandler</span><span class="params">(HttpServletRequest request)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">	<span class="keyword">for</span> (HandlerMapping hm : <span class="keyword">this</span>.handlerMappings) &#123;</span><br><span class="line">		<span class="keyword">if</span> (logger.isTraceEnabled()) &#123;</span><br><span class="line">			logger.trace(</span><br><span class="line">					<span class="string">"Testing handler map ["</span> + hm + <span class="string">"] in DispatcherServlet with name '"</span> + getServletName() + <span class="string">"'"</span>);</span><br><span class="line">		&#125;</span><br><span class="line">            <span class="comment">//根据对应的处理器映射器获取对应的处理器</span></span><br><span class="line">            <span class="comment">//这里特指那些自定义的Controller,xml形式的或注解形式的</span></span><br><span class="line">		HandlerExecutionChain handler = hm.getHandler(request);</span><br><span class="line">		<span class="keyword">if</span> (handler != <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">return</span> handler;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="getHandler-request-根据URL获取对应的Handle"><a href="#getHandler-request-根据URL获取对应的Handle" class="headerlink" title="getHandler(request):根据URL获取对应的Handle"></a>getHandler(request):根据URL获取对应的Handle</h3><blockquote>
+<h4 id="1-根据URL来查询对应的Handle"><a href="#1-根据URL来查询对应的Handle" class="headerlink" title="1.根据URL来查询对应的Handle"></a>1.根据URL来查询对应的Handle</h4><h3 id="2-获取处理器执行链-其实将handle的封装在同一个对象"><a href="#2-获取处理器执行链-其实将handle的封装在同一个对象" class="headerlink" title="2.获取处理器执行链(其实将handle的封装在同一个对象)"></a>2.获取处理器执行链(其实将handle的封装在同一个对象)</h3></blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Look up a handler for the given request, falling back to the default</span></span><br><span class="line"><span class="comment"> * handler if no specific one is found.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> request current HTTP request</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> the corresponding handler instance, or the default handler</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@see</span> #getHandlerInternal</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> HandlerExecutionChain <span class="title">getHandler</span><span class="params">(HttpServletRequest request)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        </span><br><span class="line">	Object handler = getHandlerInternal(request);</span><br><span class="line">	<span class="keyword">if</span> (handler == <span class="keyword">null</span>) &#123;</span><br><span class="line">		handler = getDefaultHandler();</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> (handler == <span class="keyword">null</span>) &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// Bean name or resolved handler?</span></span><br><span class="line">	<span class="keyword">if</span> (handler <span class="keyword">instanceof</span> String) &#123;</span><br><span class="line">		String handlerName = (String) handler;</span><br><span class="line">		handler = getApplicationContext().getBean(handlerName);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取处理器执行链(其实将handle的封装在同一个对象)</span></span><br><span class="line">	HandlerExecutionChain executionChain = getHandlerExecutionChain(handler, request);</span><br><span class="line">	<span class="keyword">if</span> (CorsUtils.isCorsRequest(request)) &#123;</span><br><span class="line">		CorsConfiguration globalConfig = <span class="keyword">this</span>.corsConfigSource.getCorsConfiguration(request);</span><br><span class="line">		CorsConfiguration handlerConfig = getCorsConfiguration(handler, request);</span><br><span class="line">		CorsConfiguration config = (globalConfig != <span class="keyword">null</span> ? globalConfig.combine(handlerConfig) : handlerConfig);</span><br><span class="line">		executionChain = getCorsHandlerExecutionChain(request, executionChain, config);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> executionChain;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id><a href="#" class="headerlink" title></a></h3><h3 id="getHandlerInternal-request-：根据URL真正查找用户定义的Controller-Handle"><a href="#getHandlerInternal-request-：根据URL真正查找用户定义的Controller-Handle" class="headerlink" title="getHandlerInternal(request)：根据URL真正查找用户定义的Controller(Handle)"></a>getHandlerInternal(request)：根据URL真正查找用户定义的Controller(Handle)</h3><blockquote>
+<h3 id="全程都需要加锁"><a href="#全程都需要加锁" class="headerlink" title="全程都需要加锁"></a>全程都需要加锁</h3><p>1.获取请求的url</p>
+<p>2.获取对应url所定义的方法</p>
+<p>3.如果找到对应的方法则返回Handle(Controller)实例</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Look up a handler method for the given request.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> HandlerMethod <span class="title">getHandlerInternal</span><span class="params">(HttpServletRequest request)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">//获取@RequestMapping中对应的url</span></span><br><span class="line">	String lookupPath = getUrlPathHelper().getLookupPathForRequest(request);</span><br><span class="line">	<span class="keyword">if</span> (logger.isDebugEnabled()) &#123;</span><br><span class="line">		logger.debug(<span class="string">"Looking up handler method for path "</span> + lookupPath);</span><br><span class="line">	&#125;</span><br><span class="line">        <span class="comment">//mappingRegistry:这个类用来保存所有注册的处理器映射器;类里面存在hashMap来存放处理器映射器</span></span><br><span class="line">        <span class="comment">//key为url,value为对应的方法</span></span><br><span class="line">        <span class="comment">//这里对该对象加了一个读锁</span></span><br><span class="line">	<span class="keyword">this</span>.mappingRegistry.acquireReadLock();</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">//获取对应url所定义的方法(执行的方法)</span></span><br><span class="line">		HandlerMethod handlerMethod = lookupHandlerMethod(lookupPath, request);</span><br><span class="line">		<span class="keyword">if</span> (logger.isDebugEnabled()) &#123;</span><br><span class="line">			<span class="keyword">if</span> (handlerMethod != <span class="keyword">null</span>) &#123;</span><br><span class="line">				logger.debug(<span class="string">"Returning handler method ["</span> + handlerMethod + <span class="string">"]"</span>);</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">else</span> &#123;</span><br><span class="line">				logger.debug(<span class="string">"Did not find handler method for ["</span> + lookupPath + <span class="string">"]"</span>);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">            <span class="comment">//如果根据url找到对应的handleMethod(处理器方法)</span></span><br><span class="line">            <span class="comment">//createWithResolvedBean():根据getBean方法获取容器中对应的Handle实例</span></span><br><span class="line">		<span class="keyword">return</span> (handlerMethod != <span class="keyword">null</span> ? handlerMethod.createWithResolvedBean() : <span class="keyword">null</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="comment">//释放锁</span></span><br><span class="line">		<span class="keyword">this</span>.mappingRegistry.releaseReadLock();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="getHandlerAdapter-Object-handler-获取对应的处理器适配器"><a href="#getHandlerAdapter-Object-handler-获取对应的处理器适配器" class="headerlink" title="getHandlerAdapter(Object handler):获取对应的处理器适配器"></a>getHandlerAdapter(Object handler):获取对应的处理器适配器</h3><blockquote>
+<p>1.遍历一个Servlet中所有处理器适配器的List;private List<handleradapter> handlerAdapters;</handleradapter></p>
+<p>2.找到一个与handler对应的处理器适配器</p>
+<h3 id="这里涉及到适配器设计模式-根据不同的适配器做不同的东西"><a href="#这里涉及到适配器设计模式-根据不同的适配器做不同的东西" class="headerlink" title="这里涉及到适配器设计模式:根据不同的适配器做不同的东西"></a>这里涉及到适配器设计模式:根据不同的适配器做不同的东西</h3></blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Return the HandlerAdapter for this handler object.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> handler the handler object to find an adapter for</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@throws</span> ServletException if no HandlerAdapter can be found for the handler. This is a fatal error.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> HandlerAdapter <span class="title">getHandlerAdapter</span><span class="params">(Object handler)</span> <span class="keyword">throws</span> ServletException </span>&#123;</span><br><span class="line">	<span class="keyword">for</span> (HandlerAdapter ha : <span class="keyword">this</span>.handlerAdapters) &#123;</span><br><span class="line">		<span class="keyword">if</span> (logger.isTraceEnabled()) &#123;</span><br><span class="line">			logger.trace(<span class="string">"Testing handler adapter ["</span> + ha + <span class="string">"]"</span>);</span><br><span class="line">		&#125;</span><br><span class="line">            <span class="comment">//根据handler来匹配相应的处理器适配器</span></span><br><span class="line">		<span class="keyword">if</span> (ha.supports(handler)) &#123;</span><br><span class="line">			<span class="keyword">return</span> ha;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">throw</span> <span class="keyword">new</span> ServletException(<span class="string">"No adapter for handler ["</span> + handler +</span><br><span class="line">			<span class="string">"]: The DispatcherServlet configuration needs to include a HandlerAdapter that supports this handler"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/springMvc/" rel="tag"># springMvc</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/11/spring事务的传播行为/" rel="next" title="spring事务的传播行为">
+                <i class="fa fa-chevron-left"></i> spring事务的传播行为
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/10/13/springMvc复习笔记/" rel="prev" title="springMvc复习笔记">
+                springMvc复习笔记 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">pan tao</p>
+              <p class="site-description motion-element" itemprop="description">这个人有点东西</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#DispatcherServlet是springMvc中的一个关键角色-被称为中央调度器-每个请求都要经过该Servlet的如下方法-至至原生的Servlet在后面会讲解"><span class="nav-number">1.</span> <span class="nav-text">DispatcherServlet是springMvc中的一个关键角色,被称为中央调度器,每个请求都要经过该Servlet的如下方法(至至原生的Servlet在后面会讲解)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#doPatcher-方法"><span class="nav-number">2.</span> <span class="nav-text">doPatcher()方法:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理"><span class="nav-number">3.</span> <span class="nav-text">所有请求到达这里之后会根据这个方法来找到对应的处理器进行处理.</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#执行的步骤"><span class="nav-number">4.</span> <span class="nav-text">执行的步骤:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-对请求进行判断-是否为mutilpart请求"><span class="nav-number">5.</span> <span class="nav-text">1.对请求进行判断,是否为mutilpart请求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-寻找对应的处理器映射器-HandleMapping-并且和执行器链包装成一个HandlerExecutionChain返回"><span class="nav-number">6.</span> <span class="nav-text">2.寻找对应的处理器映射器(HandleMapping),并且和执行器链包装成一个HandlerExecutionChain返回</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-根据handler来遍历寻找对应的处理器适配器-HandlerAdapter"><span class="nav-number">7.</span> <span class="nav-text">3.根据handler来遍历寻找对应的处理器适配器(HandlerAdapter)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-执行拦截器的preHandle方法"><span class="nav-number">8.</span> <span class="nav-text">3.执行拦截器的preHandle方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-执行处理器方法-得到一个ModelAndView对象"><span class="nav-number">9.</span> <span class="nav-text">4.执行处理器方法,得到一个ModelAndView对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-根据处理器返回结果来设置ViewName-也就是解析出View视图"><span class="nav-number">10.</span> <span class="nav-text">5.根据处理器返回结果来设置ViewName,也就是解析出View视图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-执行拦截器的postHandle方法"><span class="nav-number">11.</span> <span class="nav-text">6.执行拦截器的postHandle方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-对mv对象进行一些处理-查看是否存在异常情况-如果出现则使用异常解析器进行相关的处理"><span class="nav-number">12.</span> <span class="nav-text">7.对mv对象进行一些处理,查看是否存在异常情况,如果出现则使用异常解析器进行相关的处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-调用拦截器的afterCompletion方法"><span class="nav-number">13.</span> <span class="nav-text">8.调用拦截器的afterCompletion方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取处理器映射器的方法-最终返回的是与处理器执行链的包装对象"><span class="nav-number">14.</span> <span class="nav-text">获取处理器映射器的方法(最终返回的是与处理器执行链的包装对象)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#getHandle-方法"><span class="nav-number">15.</span> <span class="nav-text">getHandle()方法:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#getHandler-request-根据URL获取对应的Handle"><span class="nav-number">16.</span> <span class="nav-text">getHandler(request):根据URL获取对应的Handle</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-根据URL来查询对应的Handle"><span class="nav-number">16.1.</span> <span class="nav-text">1.根据URL来查询对应的Handle</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-获取处理器执行链-其实将handle的封装在同一个对象"><span class="nav-number">17.</span> <span class="nav-text">2.获取处理器执行链(其实将handle的封装在同一个对象)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">18.</span> <span class="nav-text"></span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#getHandlerInternal-request-：根据URL真正查找用户定义的Controller-Handle"><span class="nav-number">19.</span> <span class="nav-text">getHandlerInternal(request)：根据URL真正查找用户定义的Controller(Handle)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#全程都需要加锁"><span class="nav-number">20.</span> <span class="nav-text">全程都需要加锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#getHandlerAdapter-Object-handler-获取对应的处理器适配器"><span class="nav-number">21.</span> <span class="nav-text">getHandlerAdapter(Object handler):获取对应的处理器适配器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#这里涉及到适配器设计模式-根据不同的适配器做不同的东西"><span class="nav-number">22.</span> <span class="nav-text">这里涉及到适配器设计模式:根据不同的适配器做不同的东西</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pan tao</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

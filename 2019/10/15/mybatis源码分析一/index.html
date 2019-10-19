@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="mybatis,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="blog" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="一.xml和annotation同时使用哪个会生效当xml和annotation同时作用于同一个接口的方法时,annotation会生效,原因看下面源码的分析: 这里的关键类是:org.apache.ibatis.builder.annotation.MapperAnnotationBuilder,里面有一个方法 parse():用来解析dao的接口 12345678910111213141516">
+<meta name="keywords" content="mybatis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mybatis源码分析一">
+<meta property="og:url" content="http://Homeofpan.github.io/2019/10/15/mybatis源码分析一/index.html">
+<meta property="og:site_name" content="blog">
+<meta property="og:description" content="一.xml和annotation同时使用哪个会生效当xml和annotation同时作用于同一个接口的方法时,annotation会生效,原因看下面源码的分析: 这里的关键类是:org.apache.ibatis.builder.annotation.MapperAnnotationBuilder,里面有一个方法 parse():用来解析dao的接口 12345678910111213141516">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1xPYKAYm5OAABOodmXHrU792.png">
+<meta property="og:updated_time" content="2019-10-16T15:18:15.411Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="mybatis源码分析一">
+<meta name="twitter:description" content="一.xml和annotation同时使用哪个会生效当xml和annotation同时作用于同一个接口的方法时,annotation会生效,原因看下面源码的分析: 这里的关键类是:org.apache.ibatis.builder.annotation.MapperAnnotationBuilder,里面有一个方法 parse():用来解析dao的接口 12345678910111213141516">
+<meta name="twitter:image" content="http://irats.cn:8888/group1/M00/00/00/rBECIl1xPYKAYm5OAABOodmXHrU792.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://Homeofpan.github.io/2019/10/15/mybatis源码分析一/">
+
+
+
+
+
+  <title>mybatis源码分析一 | blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://Homeofpan.github.io/2019/10/15/mybatis源码分析一/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pan tao">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">mybatis源码分析一</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-15T19:39:03+08:00">
+                2019-10-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ssm/" itemprop="url" rel="index">
+                    <span itemprop="name">ssm</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="一-xml和annotation同时使用哪个会生效"><a href="#一-xml和annotation同时使用哪个会生效" class="headerlink" title="一.xml和annotation同时使用哪个会生效"></a>一.xml和annotation同时使用哪个会生效</h2><p>当xml和annotation同时作用于同一个接口的方法时,annotation会生效,原因看下面源码的分析:</p>
+<p>这里的关键类是:org.apache.ibatis.builder.annotation.MapperAnnotationBuilder,里面有一个方法</p>
+<p>parse():用来解析dao的接口</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">parse</span><span class="params">()</span> </span>&#123;</span><br><span class="line">   <span class="comment">//获取所有dao接口的全限定类名</span></span><br><span class="line">   String resource = type.toString();</span><br><span class="line">   <span class="keyword">if</span> (!configuration.isResourceLoaded(resource)) &#123;</span><br><span class="line">     <span class="comment">//解析xml配置文件</span></span><br><span class="line">     loadXmlResource();</span><br><span class="line">     configuration.addLoadedResource(resource);</span><br><span class="line">     assistant.setCurrentNamespace(type.getName());</span><br><span class="line">     parseCache();</span><br><span class="line">     parseCacheRef();</span><br><span class="line">     Method[] methods = type.getMethods();</span><br><span class="line">     <span class="keyword">for</span> (Method method : methods) &#123;</span><br><span class="line">       <span class="keyword">try</span> &#123;</span><br><span class="line">         <span class="comment">// issue #237</span></span><br><span class="line">         <span class="keyword">if</span> (!method.isBridge()) &#123;</span><br><span class="line">           <span class="comment">//解析出方法注解上面的statement语句</span></span><br><span class="line">           parseStatement(method);</span><br><span class="line">         &#125;</span><br><span class="line">       &#125; <span class="keyword">catch</span> (IncompleteElementException e) &#123;</span><br><span class="line">         configuration.addIncompleteMethod(<span class="keyword">new</span> MethodResolver(<span class="keyword">this</span>, method));</span><br><span class="line">       &#125;</span><br><span class="line">     &#125;</span><br><span class="line">   &#125;</span><br><span class="line">   parsePendingMethods();</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="由此可见-在解析annotation的之前-已经有个loadXmlResource-方法去解析xml的mapper文件-也就是如果xml存在-后面解析annotation得到的sql会将其覆盖"><a href="#由此可见-在解析annotation的之前-已经有个loadXmlResource-方法去解析xml的mapper文件-也就是如果xml存在-后面解析annotation得到的sql会将其覆盖" class="headerlink" title="由此可见,在解析annotation的之前,已经有个loadXmlResource();方法去解析xml的mapper文件,也就是如果xml存在,后面解析annotation得到的sql会将其覆盖."></a>由此可见,在解析annotation的之前,已经有个loadXmlResource();方法去解析xml的mapper文件,也就是如果xml存在,后面解析annotation得到的sql会将其覆盖.</h3><h3 id="二-使用annotation时没有xml为什么不会报错"><a href="#二-使用annotation时没有xml为什么不会报错" class="headerlink" title="二.使用annotation时没有xml为什么不会报错?"></a>二.使用annotation时没有xml为什么不会报错?</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">loadXmlResource</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// Spring may not know the real resource name so we check a flag</span></span><br><span class="line">  <span class="comment">// to prevent loading again a resource twice</span></span><br><span class="line">  <span class="comment">// this flag is set at XMLMapperBuilder#bindMapperForNamespace</span></span><br><span class="line">  <span class="keyword">if</span> (!configuration.isResourceLoaded(<span class="string">"namespace:"</span> + type.getName())) &#123;</span><br><span class="line">    <span class="comment">//获取当前&lt;mapper/&gt;标签下面扫描包的xml映射文件</span></span><br><span class="line">    String xmlResource = type.getName().replace(<span class="string">'.'</span>, <span class="string">'/'</span>) + <span class="string">".xml"</span>;</span><br><span class="line">    <span class="comment">// #1347</span></span><br><span class="line">    InputStream inputStream = type.getResourceAsStream(<span class="string">"/"</span> + xmlResource);</span><br><span class="line">    <span class="keyword">if</span> (inputStream == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">// Search XML mapper that is not in the module but in the classpath.</span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//如果不在接口的包下面,则去找classpath下面的xml文件</span></span><br><span class="line">        inputStream = Resources.getResourceAsStream(type.getClassLoader(), xmlResource);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (IOException e2) &#123;</span><br><span class="line">        <span class="comment">// ignore, resource is not required</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//找到的话就去解析对应的sql语句</span></span><br><span class="line">    <span class="keyword">if</span> (inputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">      XMLMapperBuilder xmlParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, assistant.getConfiguration(), xmlResource, configuration.getSqlFragments(), type.getName());</span><br><span class="line">      xmlParser.parse();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="这里没有报错的原因是-当xml文件不存在的时候-Resources-getResourceAsStream的方法抛出的异常被catch捕获到并且没有作任何处理-所以没有报错"><a href="#这里没有报错的原因是-当xml文件不存在的时候-Resources-getResourceAsStream的方法抛出的异常被catch捕获到并且没有作任何处理-所以没有报错" class="headerlink" title="这里没有报错的原因是,当xml文件不存在的时候,Resources.getResourceAsStream的方法抛出的异常被catch捕获到并且没有作任何处理,所以没有报错"></a>这里没有报错的原因是,当xml文件不存在的时候,Resources.getResourceAsStream的方法抛出的异常被catch捕获到并且没有作任何处理,所以没有报错</h3><h3 id="三-接着上面的那个方法来说明一个坑"><a href="#三-接着上面的那个方法来说明一个坑" class="headerlink" title="三.接着上面的那个方法来说明一个坑:"></a>三.接着上面的那个方法来说明一个坑:</h3><h3 id="当mybatis主配置文件使用如下方式来指定mapper文件位置时"><a href="#当mybatis主配置文件使用如下方式来指定mapper文件位置时" class="headerlink" title="当mybatis主配置文件使用如下方式来指定mapper文件位置时:"></a>当mybatis主配置文件使用如下方式来指定mapper文件位置时:</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 注册映射文件 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">mappers</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">package</span> <span class="attr">name</span>=<span class="string">"com.pan.dao"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">mappers</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="会出现一个严重的错误-无论你的mapper文件是放在同包下面-并且没有路径出错的问题时-mybatis依然会报错说没有绑定对应的sql语句-原因是使用maven建立mybatis项目时-maven工程会忽略掉src-main-java下面的所有资源-然后可以利用上面的loadXmlResource-方法进行解释出错的原因"><a href="#会出现一个严重的错误-无论你的mapper文件是放在同包下面-并且没有路径出错的问题时-mybatis依然会报错说没有绑定对应的sql语句-原因是使用maven建立mybatis项目时-maven工程会忽略掉src-main-java下面的所有资源-然后可以利用上面的loadXmlResource-方法进行解释出错的原因" class="headerlink" title="会出现一个严重的错误:无论你的mapper文件是放在同包下面,并且没有路径出错的问题时,mybatis依然会报错说没有绑定对应的sql语句,原因是使用maven建立mybatis项目时,maven工程会忽略掉src/main/java下面的所有资源,然后可以利用上面的loadXmlResource()方法进行解释出错的原因."></a>会出现一个严重的错误:无论你的mapper文件是放在同包下面,并且没有路径出错的问题时,mybatis依然会报错说没有绑定对应的sql语句,原因是使用maven建立mybatis项目时,maven工程会忽略掉<strong>src/main/java</strong>下面的所有资源,然后可以利用上面的loadXmlResource()方法进行解释出错的原因.</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">loadXmlResource</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// Spring may not know the real resource name so we check a flag</span></span><br><span class="line">  <span class="comment">// to prevent loading again a resource twice</span></span><br><span class="line">  <span class="comment">// this flag is set at XMLMapperBuilder#bindMapperForNamespace</span></span><br><span class="line">  <span class="keyword">if</span> (!configuration.isResourceLoaded(<span class="string">"namespace:"</span> + type.getName())) &#123;</span><br><span class="line">    <span class="comment">//程序来到这里时,会获取该包下面的xml文件的名称</span></span><br><span class="line">    String xmlResource = type.getName().replace(<span class="string">'.'</span>, <span class="string">'/'</span>) + <span class="string">".xml"</span>;</span><br><span class="line">    <span class="comment">// #1347</span></span><br><span class="line">    <span class="comment">//2.但是来到这里发现文件是不存在的,由于maven的原因</span></span><br><span class="line">    InputStream inputStream = type.getResourceAsStream(<span class="string">"/"</span> + xmlResource);</span><br><span class="line">    <span class="keyword">if</span> (inputStream == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">// Search XML mapper that is not in the module but in the classpath.</span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//如果不在接口的包下面,则去找classpath下面的xml文件</span></span><br><span class="line">        <span class="comment">//3.又来到classpath路径下找相同名称的xml文件,发现还是没有</span></span><br><span class="line">        inputStream = Resources.getResourceAsStream(type.getClassLoader(), xmlResource);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (IOException e2) &#123;</span><br><span class="line">        <span class="comment">// ignore, resource is not required</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//找到的话就去解析对应的sql语句</span></span><br><span class="line">    <span class="keyword">if</span> (inputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">      XMLMapperBuilder xmlParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, assistant.getConfiguration(), xmlResource, configuration.getSqlFragments(), type.getName());</span><br><span class="line">      xmlParser.parse();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">   <span class="comment">//4.没有解析xml文件,sql都没有解析,方法就完成了,也就是没有进行sql的绑定.</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="原因-没有解析xml文件-sql都没有解析-方法就完成了-也就是没有进行sql的绑定"><a href="#原因-没有解析xml文件-sql都没有解析-方法就完成了-也就是没有进行sql的绑定" class="headerlink" title="原因:没有解析xml文件,sql都没有解析,方法就完成了,也就是没有进行sql的绑定."></a>原因:没有解析xml文件,sql都没有解析,方法就完成了,也就是没有进行sql的绑定.</h3><h3 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案:"></a>解决方案:</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resources</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/java<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.xml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>false<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 如果不添加这个src/main/resources文件夹将消失,但没关系,看个人需要 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.xml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>false<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="四-解析-完的xml主配置文件到哪里去了"><a href="#四-解析-完的xml主配置文件到哪里去了" class="headerlink" title="四.解析 完的xml主配置文件到哪里去了?"></a>四.解析 完的xml主配置文件到哪里去了?</h3><h3 id="在mybatis中有一个类用于存放主配置信息-org-apache-ibatis-session-Configuration-在主配置文件解析完以后-就会将信息存放到该对象中-成员变量就是标签对应的属性"><a href="#在mybatis中有一个类用于存放主配置信息-org-apache-ibatis-session-Configuration-在主配置文件解析完以后-就会将信息存放到该对象中-成员变量就是标签对应的属性" class="headerlink" title="在mybatis中有一个类用于存放主配置信息:org.apache.ibatis.session.Configuration,在主配置文件解析完以后,就会将信息存放到该对象中,成员变量就是标签对应的属性."></a>在mybatis中有一个类用于存放主配置信息:org.apache.ibatis.session.Configuration,在主配置文件解析完以后,就会将信息存放到该对象中,成员变量就是标签对应的属性.</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Configuration</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> Environment environment;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> safeRowBoundsEnabled;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> safeResultHandlerEnabled = <span class="keyword">true</span>;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> mapUnderscoreToCamelCase;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> aggressiveLazyLoading;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> multipleResultSetsEnabled = <span class="keyword">true</span>;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> useGeneratedKeys;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> useColumnLabel = <span class="keyword">true</span>;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> cacheEnabled = <span class="keyword">true</span>;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> callSettersOnNulls;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> useActualParamName = <span class="keyword">true</span>;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> returnInstanceForEmptyRow;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> String logPrefix;</span><br><span class="line">  <span class="keyword">protected</span> Class&lt;? extends Log&gt; logImpl;</span><br><span class="line">  <span class="keyword">protected</span> Class&lt;? extends VFS&gt; vfsImpl;</span><br><span class="line">  <span class="keyword">protected</span> LocalCacheScope localCacheScope = LocalCacheScope.SESSION;</span><br><span class="line">  <span class="keyword">protected</span> JdbcType jdbcTypeForNull = JdbcType.OTHER;</span><br><span class="line">  <span class="keyword">protected</span> Set&lt;String&gt; lazyLoadTriggerMethods = <span class="keyword">new</span> HashSet&lt;&gt;(Arrays.asList(<span class="string">"equals"</span>, <span class="string">"clone"</span>, <span class="string">"hashCode"</span>, <span class="string">"toString"</span>));</span><br><span class="line">  <span class="keyword">protected</span> Integer defaultStatementTimeout;</span><br><span class="line">  <span class="keyword">protected</span> Integer defaultFetchSize;</span><br><span class="line">  <span class="keyword">protected</span> ResultSetType defaultResultSetType;</span><br><span class="line">  <span class="keyword">protected</span> ExecutorType defaultExecutorType = ExecutorType.SIMPLE;</span><br><span class="line">  <span class="keyword">protected</span> AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;</span><br><span class="line">  <span class="keyword">protected</span> AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> Properties variables = <span class="keyword">new</span> Properties();</span><br><span class="line">  <span class="keyword">protected</span> ReflectorFactory reflectorFactory = <span class="keyword">new</span> DefaultReflectorFactory();</span><br><span class="line">  <span class="keyword">protected</span> ObjectFactory objectFactory = <span class="keyword">new</span> DefaultObjectFactory();</span><br><span class="line">  <span class="keyword">protected</span> ObjectWrapperFactory objectWrapperFactory = <span class="keyword">new</span> DefaultObjectWrapperFactory();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> lazyLoadingEnabled = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">protected</span> ProxyFactory proxyFactory = <span class="keyword">new</span> JavassistProxyFactory(); <span class="comment">// #224 Using internal Javassist instead of OGNL</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> String databaseId;</span><br><span class="line">  <span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Configuration factory class.</span></span><br><span class="line"><span class="comment">   * Used to create Configuration for loading deserialized unread properties.</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@see</span> &lt;a href='https://code.google.com/p/mybatis/issues/detail?id=300'&gt;Issue 300 (google code)&lt;/a&gt;</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="keyword">protected</span> Class&lt;?&gt; configurationFactory;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> MapperRegistry mapperRegistry = <span class="keyword">new</span> MapperRegistry(<span class="keyword">this</span>);</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> InterceptorChain interceptorChain = <span class="keyword">new</span> InterceptorChain();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> TypeHandlerRegistry typeHandlerRegistry = <span class="keyword">new</span> TypeHandlerRegistry();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> TypeAliasRegistry typeAliasRegistry = <span class="keyword">new</span> TypeAliasRegistry();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> LanguageDriverRegistry languageRegistry = <span class="keyword">new</span> LanguageDriverRegistry();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;String, MappedStatement&gt; mappedStatements = <span class="keyword">new</span> StrictMap&lt;MappedStatement&gt;(<span class="string">"Mapped Statements collection"</span>)</span><br><span class="line">      .conflictMessageProducer((savedValue, targetValue) -&gt;</span><br><span class="line">          <span class="string">". please check "</span> + savedValue.getResource() + <span class="string">" and "</span> + targetValue.getResource());</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;String, Cache&gt; caches = <span class="keyword">new</span> StrictMap&lt;&gt;(<span class="string">"Caches collection"</span>);</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;String, ResultMap&gt; resultMaps = <span class="keyword">new</span> StrictMap&lt;&gt;(<span class="string">"Result Maps collection"</span>);</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;String, ParameterMap&gt; parameterMaps = <span class="keyword">new</span> StrictMap&lt;&gt;(<span class="string">"Parameter Maps collection"</span>);</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;String, KeyGenerator&gt; keyGenerators = <span class="keyword">new</span> StrictMap&lt;&gt;(<span class="string">"Key Generators collection"</span>);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Set&lt;String&gt; loadedResources = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;String, XNode&gt; sqlFragments = <span class="keyword">new</span> StrictMap&lt;&gt;(<span class="string">"XML fragments parsed from previous mappers"</span>);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Collection&lt;XMLStatementBuilder&gt; incompleteStatements = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Collection&lt;CacheRefResolver&gt; incompleteCacheRefs = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Collection&lt;ResultMapResolver&gt; incompleteResultMaps = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> Collection&lt;MethodResolver&gt; incompleteMethods = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="五-自定义的typeHandle-类型处理器"><a href="#五-自定义的typeHandle-类型处理器" class="headerlink" title="五.自定义的typeHandle(类型处理器)"></a>五.自定义的typeHandle(类型处理器)</h3><p>官方对typeHandle的定义:</p>
+<blockquote>
+<p>Whenever MyBatis sets a parameter on a PreparedStatement or retrieves a value from a ResultSet, a TypeHandler is used to retrieve the value in a means appropriate to the Java type. The following table describes the default TypeHandlers.</p>
+</blockquote>
+<p>自定义typeHandle的实现:</p>
+<blockquote>
+<p>You can override the type handlers or create your own to deal with unsupported or non-standard types. To do so, implement the interface <code>org.apache.ibatis.type.TypeHandler</code> or extend the convenience class <code>org.apache.ibatis.type.BaseTypeHandler</code> and optionally map it to a JDBC type. </p>
+</blockquote>
+<h3 id="继承BaseTypeHandler"><a href="#继承BaseTypeHandler" class="headerlink" title="继承BaseTypeHandler:"></a>继承BaseTypeHandler<t>:</t></h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ExampleTypeHandler.java</span></span><br><span class="line"><span class="meta">@MappedJdbcTypes</span>(JdbcType.VARCHAR)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ExampleTypeHandler</span> <span class="keyword">extends</span> <span class="title">BaseTypeHandler</span>&lt;<span class="title">String</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setNonNullParameter</span><span class="params">(PreparedStatement ps, <span class="keyword">int</span> i,</span></span></span><br><span class="line"><span class="function"><span class="params">    String parameter, JdbcType jdbcType)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    ps.setString(i, parameter);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> String <span class="title">getNullableResult</span><span class="params">(ResultSet rs, String columnName)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> rs.getString(columnName);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> String <span class="title">getNullableResult</span><span class="params">(ResultSet rs, <span class="keyword">int</span> columnIndex)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> rs.getString(columnIndex);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> String <span class="title">getNullableResult</span><span class="params">(CallableStatement cs, <span class="keyword">int</span> columnIndex)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> cs.getString(columnIndex);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="主配置文件中"><a href="#主配置文件中" class="headerlink" title="主配置文件中:"></a>主配置文件中:</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--导入自定义的typeHandle--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">typeHandlers</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">typeHandler</span> <span class="attr">handler</span>=<span class="string">"com.pan.handler.MyHandler"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">typeHandlers</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="同时也可以在resultMap中使用"><a href="#同时也可以在resultMap中使用" class="headerlink" title="同时也可以在resultMap中使用:"></a>同时也可以在resultMap中使用:</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resultMap</span> <span class="attr">type</span>=<span class="string">"Country"</span> <span class="attr">id</span>=<span class="string">"countryMap"</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">id</span> <span class="attr">column</span>=<span class="string">"cid"</span> <span class="attr">property</span>=<span class="string">"cid"</span> <span class="attr">jdbcType</span>=<span class="string">"INTEGER"</span>/&gt;</span></span><br><span class="line">	<span class="comment">&lt;!--如果这里标签里面加入了jdbcType的话,MyHandle里面的@MappedJdbcTypes中的配置jdbc类型则忽略--&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">result</span> <span class="attr">column</span>=<span class="string">"cname"</span> <span class="attr">property</span>=<span class="string">"cname"</span> <span class="attr">jdbcType</span>=<span class="string">"VARCHAR"</span> <span class="attr">typeHandler</span>=<span class="string">"com.pan.handler.MyHandler"</span>/&gt;</span></span><br><span class="line">	<span class="comment">&lt;!-- 与上面的作用一样</span></span><br><span class="line"><span class="comment">		&lt;result column="cname" property="cname"  typeHandler="com.pan.handler.MyHandler"/&gt;</span></span><br><span class="line"><span class="comment">	--&gt;</span></span><br><span class="line">	<span class="comment">&lt;!--property中放关联属性  ofType指封装的类型--&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">collection</span> <span class="attr">property</span>=<span class="string">"ministers"</span> <span class="attr">ofType</span>=<span class="string">"Minister"</span> <span class="attr">select</span>=<span class="string">"selectMinisterByCountry"</span> <span class="attr">column</span>=<span class="string">"cid"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resultMap</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="在与spring整合时使用的sqlSessionFactory是org-mybatis-spring-SqlSessionFactoryBean，此时要注册自定义的TypeHandler，只需要把自定义的handler往这个bean里面丢（setTypeHandlers-setTypeHandlersPackage-）"><a href="#在与spring整合时使用的sqlSessionFactory是org-mybatis-spring-SqlSessionFactoryBean，此时要注册自定义的TypeHandler，只需要把自定义的handler往这个bean里面丢（setTypeHandlers-setTypeHandlersPackage-）" class="headerlink" title="在与spring整合时使用的sqlSessionFactory是org.mybatis.spring.SqlSessionFactoryBean，此时要注册自定义的TypeHandler，只需要把自定义的handler往这个bean里面丢（setTypeHandlers()/setTypeHandlersPackage()）"></a>在与spring整合时使用的sqlSessionFactory是org.mybatis.spring.SqlSessionFactoryBean，此时要注册自定义的TypeHandler，只需要把自定义的handler往这个bean里面丢（setTypeHandlers()/setTypeHandlersPackage()）</h3><h3 id="六-自定义插件-plugins"><a href="#六-自定义插件-plugins" class="headerlink" title="六.自定义插件(plugins):"></a>六.自定义插件(plugins):</h3><p>MyBatis allows you to intercept calls to at certain points within the execution of a mapped statement. By default, MyBatis allows plug-ins to intercept method calls of:</p>
+<ul>
+<li>Executor (update, query, flushStatements, commit, rollback, getTransaction, close, isClosed)</li>
+<li>ParameterHandler (getParameterObject, setParameters)</li>
+<li>ResultSetHandler (handleResultSets, handleOutputParameters)</li>
+<li>StatementHandler (prepare, parameterize, batch, update, query)</li>
+</ul>
+<h3 id="How-to-do"><a href="#How-to-do" class="headerlink" title="How to do?"></a>How to do?</h3><p>Using plug-ins is pretty simple given the power they provide. Simply implement the Interceptor interface, being sure to specify the signatures you want to intercept.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ExamplePlugin.java</span></span><br><span class="line"><span class="meta">@Intercepts</span>(&#123;<span class="meta">@Signature</span>(</span><br><span class="line">  type= Executor.class,</span><br><span class="line">  method = <span class="string">"update"</span>,</span><br><span class="line">  args = &#123;MappedStatement.class,Object.class&#125;)&#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ExamplePlugin</span> <span class="keyword">implements</span> <span class="title">Interceptor</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">  <span class="function"><span class="keyword">public</span> Object <span class="title">intercept</span><span class="params">(Invocation invocation)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">    <span class="comment">// implement pre processing if need</span></span><br><span class="line">    Object returnObject = invocation.proceed();</span><br><span class="line">    <span class="comment">// implement post processing if need</span></span><br><span class="line">    <span class="keyword">return</span> returnObject;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setProperties</span><span class="params">(Properties properties)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.properties = properties;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- mybatis-config.xml --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">plugin</span> <span class="attr">interceptor</span>=<span class="string">"org.mybatis.example.ExamplePlugin"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"someProperty"</span> <span class="attr">value</span>=<span class="string">"100"</span>/&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>The plug-in above will intercept all calls to the “update” method on the Executor instance, which is an internal object responsible for the low level execution of mapped statements.</p>
+<p>第二种方法:</p>
+<p>除了用插件来修改 MyBatis 核心行为之外，还可以通过完全覆盖配置类来达到目的。只需继承后覆盖其中的每个方法，再把它传递到 SqlSessionFactoryBuilder.build(myConfig) 方法即可。再次重申，这可能会严重影响 MyBatis 的行为，务请慎之又慎。</p>
+<h2 id="七-在关联查询里是怎么实现执行第二句select语句的"><a href="#七-在关联查询里是怎么实现执行第二句select语句的" class="headerlink" title="七.在关联查询里是怎么实现执行第二句select语句的"></a>七.在关联查询里是怎么实现执行第二句select语句的</h2><p>在使用了关联查询之后，会有这么一个问题，我们调用的mapper方法只是查询第一条select语句，其关联部分的select语句到底是怎么执行的？为什么会执行？什么时候执行？</p>
+<p>下面直接使用源码解释上面的问题，注意：为了使演示明显，我们开启了lazyload，关于lazyload的信息也在上面的地址有<br>在mybatis里有这么一个类org.apache.ibatis.executor.resultset.DefaultResultSetHandler，我们来关注里面这么一个方法 <strong>getPropertyMappingValue()</strong> nested：嵌套<br>在看getPropertyMappingValue()方法的源代码之前，我们有必要先模拟出一个mapper文件里的resultMap，如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resultMap</span> <span class="attr">type</span>=<span class="string">"Country"</span> <span class="attr">id</span>=<span class="string">"countryMap"</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">id</span> <span class="attr">column</span>=<span class="string">"cid"</span> <span class="attr">property</span>=<span class="string">"cid"</span> <span class="attr">jdbcType</span>=<span class="string">"INTEGER"</span>/&gt;</span></span><br><span class="line">	<span class="comment">&lt;!--如果这里标签里面加入了jdbcType的话,MyHandle里面的@MappedJdbcTypes中的配置jdbc类型则忽略--&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">result</span> <span class="attr">column</span>=<span class="string">"cname"</span> <span class="attr">property</span>=<span class="string">"cname"</span> <span class="attr">jdbcType</span>=<span class="string">"VARCHAR"</span> <span class="attr">typeHandler</span>=<span class="string">"com.pan.handler.MyHandler"</span>/&gt;</span></span><br><span class="line">	<span class="comment">&lt;!-- 与上面的作用一样</span></span><br><span class="line"><span class="comment">		&lt;result column="cname" property="cname"  typeHandler="com.pan.handler.MyHandler"/&gt;</span></span><br><span class="line"><span class="comment">	--&gt;</span></span><br><span class="line">	<span class="comment">&lt;!--property中放关联属性  ofType指封装的类型--&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">collection</span> <span class="attr">property</span>=<span class="string">"ministers"</span> <span class="attr">ofType</span>=<span class="string">"Minister"</span> <span class="attr">select</span>=<span class="string">"selectMinisterByCountry"</span> <span class="attr">column</span>=<span class="string">"cid"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resultMap</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>下面是我们getPropertyMappingValue()方法的源代码。我们将模拟运行情况：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Object <span class="title">getPropertyMappingValue</span><span class="params">(ResultSet rs, MetaObject metaResultObject, ResultMapping propertyMapping, ResultLoaderMap lazyLoader, String columnPrefix)</span></span></span><br><span class="line"><span class="function">      <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">	<span class="comment">//判断是否存在嵌套查询ID（说白了就是判断上面resultMap的子标签里是否存在select="selectParentById"）</span></span><br><span class="line">	<span class="keyword">if</span> (propertyMapping.getNestedQueryId() != <span class="keyword">null</span>) &#123;</span><br><span class="line">	<span class="comment">//存在嵌套查询id：namespace.selectParentById</span></span><br><span class="line">	<span class="comment">//当然，id，name并不存在nestedQueryId，只有到了parent才会进来这个方法</span></span><br><span class="line">	<span class="comment">//我们来看看这个方法的实现，该代码框里下方的代码暂时不重要了，看下一个代码块</span></span><br><span class="line">	<span class="keyword">return</span> getNestedQueryMappingValue(rs, metaResultObject, propertyMapping, lazyLoader, columnPrefix);</span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> (propertyMapping.getResultSet() != <span class="keyword">null</span>) &#123;</span><br><span class="line">		addPendingChildRelation(rs, metaResultObject, propertyMapping);   <span class="comment">// TODO is that OK?</span></span><br><span class="line">		<span class="keyword">return</span> DEFERRED;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="keyword">final</span> TypeHandler&lt;?&gt; typeHandler = propertyMapping.getTypeHandler();</span><br><span class="line">		<span class="keyword">final</span> String column = prependPrefix(propertyMapping.getColumn(), columnPrefix);</span><br><span class="line">		<span class="keyword">return</span> typeHandler.getResult(rs, column);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> Object <span class="title">getNestedQueryMappingValue</span><span class="params">(ResultSet rs, MetaObject metaResultObject, ResultMapping propertyMapping, ResultLoaderMap lazyLoader, String columnPrefix)</span></span></span><br><span class="line"><span class="function">      <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    ...这些代码就省略了，暂时不重要</span><br><span class="line">	<span class="keyword">if</span> (propertyMapping.isLazy()) &#123;</span><br><span class="line">		<span class="comment">//重要的是这一句！！</span></span><br><span class="line">		<span class="comment">//往lazyLoader(ResultLoaderMap)里丢loader，包含了关联加载的各种信息</span></span><br><span class="line">		lazyLoader.addLoader(property, metaResultObject, resultLoader);</span><br><span class="line">		value = DEFERRED;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		value = resultLoader.loadResult();</span><br><span class="line">	&#125;</span><br><span class="line">	...这些代码就省略了，暂时不重要</span><br><span class="line"><span class="keyword">return</span> value;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>到了这里我们可以推断出，mybatis关联查询的lazyload的是通过一个lazyLoader(Map)来实现的。大概流程如下，查询了第一个select语句后，把关联查询的语句暂时保存在一个map中。在真正需要的时候再来调用（这里默认将的是深度延迟加载，具体看上面的链接）。<br>接下来我们来验证上面的说法，思路很简单，既然mybatis向map中addLoader，那么在真正使用的时候肯定会取出来。所以我们来到这个map的实现类ResultLoaderMap来看一下他的方法 <img src="http://irats.cn:8888/group1/M00/00/00/rBECIl1xPYKAYm5OAABOodmXHrU792.png" alt="1"> </p>
+<h3 id="分析如何执行延时加载的select语句"><a href="#分析如何执行延时加载的select语句" class="headerlink" title="分析如何执行延时加载的select语句:"></a>分析如何执行延时加载的select语句:</h3><h3 id="当调用关联对象的get-方法时-会调用org-apache-ibatis-executor-loader-javassist-JavassistProxyFactory的invoke方法"><a href="#当调用关联对象的get-方法时-会调用org-apache-ibatis-executor-loader-javassist-JavassistProxyFactory的invoke方法" class="headerlink" title="当调用关联对象的get()方法时,会调用org.apache.ibatis.executor.loader.javassist.JavassistProxyFactory的invoke方法:"></a>当调用关联对象的get()方法时,会调用org.apache.ibatis.executor.loader.javassist.JavassistProxyFactory的invoke方法:</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object enhanced, Method method, Method methodProxy, Object[] args)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">      <span class="keyword">final</span> String methodName = method.getName();</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (lazyLoader) &#123;</span><br><span class="line">          <span class="keyword">if</span> (WRITE_REPLACE_METHOD.equals(methodName)) &#123;</span><br><span class="line">            Object original;</span><br><span class="line">            <span class="keyword">if</span> (constructorArgTypes.isEmpty()) &#123;</span><br><span class="line">              original = objectFactory.create(type);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              original = objectFactory.create(type, constructorArgTypes, constructorArgs);</span><br><span class="line">            &#125;</span><br><span class="line">            PropertyCopier.copyBeanProperties(type, enhanced, original);</span><br><span class="line">            <span class="keyword">if</span> (lazyLoader.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">              <span class="keyword">return</span> <span class="keyword">new</span> JavassistSerialStateHolder(original, lazyLoader.getProperties(), objectFactory, constructorArgTypes, constructorArgs);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              <span class="keyword">return</span> original;</span><br><span class="line">            &#125;</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//lazyLoader是一个ResultLoaderMap</span></span><br><span class="line">            <span class="comment">//这里判断map中是否存在键值对</span></span><br><span class="line">            <span class="keyword">if</span> (lazyLoader.size() &gt; <span class="number">0</span> &amp;&amp; !FINALIZE_METHOD.equals(methodName)) &#123;</span><br><span class="line">              <span class="keyword">if</span> (aggressive || lazyLoadTriggerMethods.contains(methodName)) &#123;</span><br><span class="line">                <span class="comment">//到这里进行所有的map里面的键值对的load方法</span></span><br><span class="line">                lazyLoader.loadAll();</span><br><span class="line">              &#125; <span class="keyword">else</span> <span class="keyword">if</span> (PropertyNamer.isSetter(methodName)) &#123;</span><br><span class="line">                <span class="keyword">final</span> String property = PropertyNamer.methodToProperty(methodName);</span><br><span class="line">                lazyLoader.remove(property);</span><br><span class="line">              &#125; <span class="keyword">else</span> <span class="keyword">if</span> (PropertyNamer.isGetter(methodName)) &#123;</span><br><span class="line">                <span class="keyword">final</span> String property = PropertyNamer.methodToProperty(methodName);</span><br><span class="line">                <span class="keyword">if</span> (lazyLoader.hasLoader(property)) &#123;</span><br><span class="line">                  lazyLoader.load(property);</span><br><span class="line">                &#125;</span><br><span class="line">              &#125;</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> methodProxy.invoke(enhanced, args);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">        <span class="keyword">throw</span> ExceptionUtil.unwrapThrowable(t);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="loadAll"><a href="#loadAll" class="headerlink" title="loadAll():"></a>loadAll():</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">loadAll</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> Set&lt;String&gt; methodNameSet = loaderMap.keySet();</span><br><span class="line">    String[] methodNames = methodNameSet.toArray(<span class="keyword">new</span> String[methodNameSet.size()]);</span><br><span class="line">    <span class="keyword">for</span> (String methodName : methodNames) &#123;</span><br><span class="line">      load(methodName);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">load</span><span class="params">(String property)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">  LoadPair pair = loaderMap.remove(property.toUpperCase(Locale.ENGLISH));</span><br><span class="line">  <span class="keyword">if</span> (pair != <span class="keyword">null</span>) &#123;</span><br><span class="line"> <span class="comment">//上面从map移除key，拿这里应该就是进行查询了，跟进去看看</span></span><br><span class="line">    pair.load();</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>是一个方法调用，继续跟进</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">this</span>.load(<span class="keyword">null</span>);</span><br></pre></td></tr></table></figure>
+
+<p>进来后这个方法的底部有这么一句代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//有setValue还有loadResult()</span></span><br><span class="line"><span class="comment">//你懂的，进去进去</span></span><br><span class="line"><span class="keyword">this</span>.metaResultObject.setValue(property, <span class="keyword">this</span>.resultLoader.loadResult());</span><br></pre></td></tr></table></figure>
+
+<p>进来loadResult()方法，代码如下：selectList()，讲道理到这里就可以完了，但是还是进去瞅下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Object <span class="title">loadResult</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">  List&lt;Object&gt; list = selectList();</span><br><span class="line">  resultObject = resultExtractor.extractObjectFromList(list, targetType);</span><br><span class="line">  <span class="keyword">return</span> resultObject;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>进入selectList()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> &lt;E&gt; <span class="function">List&lt;E&gt; <span class="title">selectList</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">  Executor localExecutor = executor;</span><br><span class="line">  <span class="keyword">if</span> (Thread.currentThread().getId() != <span class="keyword">this</span>.creatorThreadId || localExecutor.isClosed()) &#123;</span><br><span class="line">    localExecutor = newExecutor();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line"> <span class="comment">//return + query方法，到了这里就不再继续跟进了，已经够了</span></span><br><span class="line">    <span class="keyword">return</span> localExecutor.&lt;E&gt; query(mappedStatement, parameterObject, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER, cacheKey, boundSql);</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (localExecutor != executor) &#123;</span><br><span class="line">      localExecutor.close(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从selectList()方法出来后就执行setValue方法，剩下的就不说了。这里主要是讲lazyload是如何实现的，到这里就已经完了。其他的以后再说</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/mybatis/" rel="tag"># mybatis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/15/mybatis重点复习/" rel="next" title="mybatis重点复习">
+                <i class="fa fa-chevron-left"></i> mybatis重点复习
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/10/19/mapper接口如何与mapper-xml进行映射/" rel="prev" title="mapper接口如何与mapper.xml进行映射">
+                mapper接口如何与mapper.xml进行映射 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">pan tao</p>
+              <p class="site-description motion-element" itemprop="description">这个人有点东西</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一-xml和annotation同时使用哪个会生效"><span class="nav-number">1.</span> <span class="nav-text">一.xml和annotation同时使用哪个会生效</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#由此可见-在解析annotation的之前-已经有个loadXmlResource-方法去解析xml的mapper文件-也就是如果xml存在-后面解析annotation得到的sql会将其覆盖"><span class="nav-number">1.1.</span> <span class="nav-text">由此可见,在解析annotation的之前,已经有个loadXmlResource();方法去解析xml的mapper文件,也就是如果xml存在,后面解析annotation得到的sql会将其覆盖.</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二-使用annotation时没有xml为什么不会报错"><span class="nav-number">1.2.</span> <span class="nav-text">二.使用annotation时没有xml为什么不会报错?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#这里没有报错的原因是-当xml文件不存在的时候-Resources-getResourceAsStream的方法抛出的异常被catch捕获到并且没有作任何处理-所以没有报错"><span class="nav-number">1.3.</span> <span class="nav-text">这里没有报错的原因是,当xml文件不存在的时候,Resources.getResourceAsStream的方法抛出的异常被catch捕获到并且没有作任何处理,所以没有报错</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#三-接着上面的那个方法来说明一个坑"><span class="nav-number">1.4.</span> <span class="nav-text">三.接着上面的那个方法来说明一个坑:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#当mybatis主配置文件使用如下方式来指定mapper文件位置时"><span class="nav-number">1.5.</span> <span class="nav-text">当mybatis主配置文件使用如下方式来指定mapper文件位置时:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#会出现一个严重的错误-无论你的mapper文件是放在同包下面-并且没有路径出错的问题时-mybatis依然会报错说没有绑定对应的sql语句-原因是使用maven建立mybatis项目时-maven工程会忽略掉src-main-java下面的所有资源-然后可以利用上面的loadXmlResource-方法进行解释出错的原因"><span class="nav-number">1.6.</span> <span class="nav-text">会出现一个严重的错误:无论你的mapper文件是放在同包下面,并且没有路径出错的问题时,mybatis依然会报错说没有绑定对应的sql语句,原因是使用maven建立mybatis项目时,maven工程会忽略掉src/main/java下面的所有资源,然后可以利用上面的loadXmlResource()方法进行解释出错的原因.</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原因-没有解析xml文件-sql都没有解析-方法就完成了-也就是没有进行sql的绑定"><span class="nav-number">1.7.</span> <span class="nav-text">原因:没有解析xml文件,sql都没有解析,方法就完成了,也就是没有进行sql的绑定.</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解决方案"><span class="nav-number">1.8.</span> <span class="nav-text">解决方案:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四-解析-完的xml主配置文件到哪里去了"><span class="nav-number">1.9.</span> <span class="nav-text">四.解析 完的xml主配置文件到哪里去了?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#在mybatis中有一个类用于存放主配置信息-org-apache-ibatis-session-Configuration-在主配置文件解析完以后-就会将信息存放到该对象中-成员变量就是标签对应的属性"><span class="nav-number">1.10.</span> <span class="nav-text">在mybatis中有一个类用于存放主配置信息:org.apache.ibatis.session.Configuration,在主配置文件解析完以后,就会将信息存放到该对象中,成员变量就是标签对应的属性.</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#五-自定义的typeHandle-类型处理器"><span class="nav-number">1.11.</span> <span class="nav-text">五.自定义的typeHandle(类型处理器)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#继承BaseTypeHandler"><span class="nav-number">1.12.</span> <span class="nav-text">继承BaseTypeHandler:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#主配置文件中"><span class="nav-number">1.13.</span> <span class="nav-text">主配置文件中:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#同时也可以在resultMap中使用"><span class="nav-number">1.14.</span> <span class="nav-text">同时也可以在resultMap中使用:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#在与spring整合时使用的sqlSessionFactory是org-mybatis-spring-SqlSessionFactoryBean，此时要注册自定义的TypeHandler，只需要把自定义的handler往这个bean里面丢（setTypeHandlers-setTypeHandlersPackage-）"><span class="nav-number">1.15.</span> <span class="nav-text">在与spring整合时使用的sqlSessionFactory是org.mybatis.spring.SqlSessionFactoryBean，此时要注册自定义的TypeHandler，只需要把自定义的handler往这个bean里面丢（setTypeHandlers()/setTypeHandlersPackage()）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#六-自定义插件-plugins"><span class="nav-number">1.16.</span> <span class="nav-text">六.自定义插件(plugins):</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#How-to-do"><span class="nav-number">1.17.</span> <span class="nav-text">How to do?</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#七-在关联查询里是怎么实现执行第二句select语句的"><span class="nav-number">2.</span> <span class="nav-text">七.在关联查询里是怎么实现执行第二句select语句的</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#分析如何执行延时加载的select语句"><span class="nav-number">2.1.</span> <span class="nav-text">分析如何执行延时加载的select语句:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#当调用关联对象的get-方法时-会调用org-apache-ibatis-executor-loader-javassist-JavassistProxyFactory的invoke方法"><span class="nav-number">2.2.</span> <span class="nav-text">当调用关联对象的get()方法时,会调用org.apache.ibatis.executor.loader.javassist.JavassistProxyFactory的invoke方法:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#loadAll"><span class="nav-number">2.3.</span> <span class="nav-text">loadAll():</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pan tao</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
