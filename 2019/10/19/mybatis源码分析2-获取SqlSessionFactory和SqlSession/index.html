@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="mybatis,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="blog" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="流程图:  一.实验关键代码12345//加载主配置文件InputStream inputStream = Resources.getResourceAsStream(&quot;mybatisConfig.xml&quot;);//创建SqlSessionFactory对象SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().bui">
+<meta name="keywords" content="mybatis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mybatis源码分析2-获取SqlSessionFactory和SqlSession">
+<meta property="og:url" content="http://Homeofpan.github.io/2019/10/19/mybatis源码分析2-获取SqlSessionFactory和SqlSession/index.html">
+<meta property="og:site_name" content="blog">
+<meta property="og:description" content="流程图:  一.实验关键代码12345//加载主配置文件InputStream inputStream = Resources.getResourceAsStream(&quot;mybatisConfig.xml&quot;);//创建SqlSessionFactory对象SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().bui">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://106.15.204.187:8888/group1/M00/00/00/rBEKH12rDMuAQXQ-AADJ2HxnDTA060.png">
+<meta property="og:updated_time" content="2019-10-19T13:17:54.226Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="mybatis源码分析2-获取SqlSessionFactory和SqlSession">
+<meta name="twitter:description" content="流程图:  一.实验关键代码12345//加载主配置文件InputStream inputStream = Resources.getResourceAsStream(&quot;mybatisConfig.xml&quot;);//创建SqlSessionFactory对象SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().bui">
+<meta name="twitter:image" content="http://106.15.204.187:8888/group1/M00/00/00/rBEKH12rDMuAQXQ-AADJ2HxnDTA060.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://Homeofpan.github.io/2019/10/19/mybatis源码分析2-获取SqlSessionFactory和SqlSession/">
+
+
+
+
+
+  <title>mybatis源码分析2-获取SqlSessionFactory和SqlSession | blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://Homeofpan.github.io/2019/10/19/mybatis源码分析2-获取SqlSessionFactory和SqlSession/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pan tao">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">mybatis源码分析2-获取SqlSessionFactory和SqlSession</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-19T15:25:30+08:00">
+                2019-10-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>流程图:</p>
+<p><img src="http://106.15.204.187:8888/group1/M00/00/00/rBEKH12rDMuAQXQ-AADJ2HxnDTA060.png" alt></p>
+<h3 id="一-实验关键代码"><a href="#一-实验关键代码" class="headerlink" title="一.实验关键代码"></a>一.实验关键代码</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//加载主配置文件</span></span><br><span class="line">InputStream inputStream = Resources.getResourceAsStream(<span class="string">"mybatisConfig.xml"</span>);</span><br><span class="line"><span class="comment">//创建SqlSessionFactory对象</span></span><br><span class="line">SqlSessionFactory sqlSessionFactory = <span class="keyword">new</span> SqlSessionFactoryBuilder().build(inputStream);</span><br><span class="line">sqlSession = sqlSessionFactory.openSession();</span><br></pre></td></tr></table></figure>
+
+<h2 id="二-创建SqlSessionFactory对象"><a href="#二-创建SqlSessionFactory对象" class="headerlink" title="二.创建SqlSessionFactory对象"></a>二.创建SqlSessionFactory对象</h2><h3 id="进入build-方法"><a href="#进入build-方法" class="headerlink" title="进入build()方法"></a>进入build()方法</h3><p>​                可以发现build()方法是一个重载方法.这个重载方式是拿来创建SqlSessionFactory对象,而我们重点关注的是build(parser.parse())方法;</p>
+<p>parser.parse()方法是将mybatis的主配置文件解析并包装为Configuration对象， <strong>注意：这个Configuration非常重要，会贯穿于整个mybatis的生命</strong> ,build(parser.parse())是用来创建SqlSessionFactory对象</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> SqlSessionFactory <span class="title">build</span><span class="params">(InputStream inputStream, String environment, Properties properties)</span> </span>&#123;</span><br><span class="line">   <span class="keyword">try</span> &#123;</span><br><span class="line">     <span class="comment">//创建一个xml解析器parser</span></span><br><span class="line">     XMLConfigBuilder parser = <span class="keyword">new</span> XMLConfigBuilder(inputStream, environment, properties);</span><br><span class="line">     <span class="comment">//关注这个parser.parse()方法,这个方法解析mybatis主配置文件,并包装为Configuration类,这个类会贯穿mybaits的各个流程</span></span><br><span class="line"> <span class="comment">//build()方法就去创建DefaultSqlSessionFactory</span></span><br><span class="line">     <span class="keyword">return</span> build(parser.parse());</span><br><span class="line">   &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">     <span class="keyword">throw</span> ExceptionFactory.wrapException(<span class="string">"Error building SqlSession."</span>, e);</span><br><span class="line">   &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">     ErrorContext.instance().reset();</span><br><span class="line">     <span class="keyword">try</span> &#123;</span><br><span class="line">       inputStream.close();</span><br><span class="line">     &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">       <span class="comment">// Intentionally ignore. Prefer previous error.</span></span><br><span class="line">     &#125;</span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="进入parse-方法"><a href="#进入parse-方法" class="headerlink" title="进入parse()方法:"></a>进入parse()方法:</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//标志位:标志xml解析器是否已经解析过</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">boolean</span> parsed;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> Configuration <span class="title">parse</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (parsed) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Each XMLConfigBuilder can only be used once."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    parsed = <span class="keyword">true</span>;</span><br><span class="line">    <span class="comment">//获取&lt;configuration&gt;标签的信息,并且解析该标签下面的所有子标签</span></span><br><span class="line">    <span class="comment">//private final XPathParser parser; 这个变量是在创建XMLConfigBuilder的xml解析器时,自动创建的</span></span><br><span class="line">    parseConfiguration(parser.evalNode(<span class="string">"/configuration"</span>));</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> configuration;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="但是我们发现parser-evalNode-“-configuration”-这个方法只是获取到configuration标签的信息-并没有去解析子标签-所以我们继续进入parseConfiguration方法"><a href="#但是我们发现parser-evalNode-“-configuration”-这个方法只是获取到configuration标签的信息-并没有去解析子标签-所以我们继续进入parseConfiguration方法" class="headerlink" title="但是我们发现parser.evalNode(“/configuration”)这个方法只是获取到configuration标签的信息,并没有去解析子标签,所以我们继续进入parseConfiguration方法()"></a>但是我们发现parser.evalNode(“/configuration”)这个方法只是获取到configuration标签的信息,并没有去解析子标签,所以我们继续进入parseConfiguration方法()</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">*该方法对configuration的子标签进行解析,并且由于方法的顺序性,导致了在写xml标签时一定要遵循这个顺序</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">parseConfiguration</span><span class="params">(XNode root)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">//issue #117 read properties first</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">//解析properties标签</span></span><br><span class="line">      propertiesElement(root.evalNode(<span class="string">"properties"</span>));</span><br><span class="line">      Properties settings = settingsAsProperties(root.evalNode(<span class="string">"settings"</span>));</span><br><span class="line">      loadCustomVfs(settings);</span><br><span class="line">      loadCustomLogImpl(settings);</span><br><span class="line"></span><br><span class="line">      <span class="comment">// 解析typeAliases标签及其子标签,typeAliases这个标签是用来起别名的</span></span><br><span class="line">      <span class="comment">// 别名是用在那个叫啥mapper.xml文件里的resultType啊这些之类的,细的不说</span></span><br><span class="line">      typeAliasesElement(root.evalNode(<span class="string">"typeAliases"</span>));</span><br><span class="line"></span><br><span class="line">      <span class="comment">//用来解析plugins标签的</span></span><br><span class="line">      <span class="comment">// plugins就是一个拦截器interceptor</span></span><br><span class="line">      <span class="comment">// 可以拦截Executor 、ParameterHandler 、ResultSetHandler 、StatementHandler</span></span><br><span class="line">      <span class="comment">// 的部分方法，处理我们自己的逻辑。</span></span><br><span class="line">      <span class="comment">// sql真正执行的地方是executor，ParameterHandler 是处理我们传入参数的，mybatis默认帮我们实现了不少的typeHandler</span></span><br><span class="line">      <span class="comment">// 当我们不显示配置typeHandler的时候，mybatis会根据参数类型自动选择合适的typeHandler执行，其实就是ParameterHandler</span></span><br><span class="line">      <span class="comment">// 在选择。</span></span><br><span class="line">      <span class="comment">// ResultSetHandler 就是处理返回结果的。</span></span><br><span class="line">      <span class="comment">// 这里是官网的介绍和使用 http://www.mybatis.org/mybatis-3/configuration.html#plugins</span></span><br><span class="line">      pluginElement(root.evalNode(<span class="string">"plugins"</span>));</span><br><span class="line">      objectFactoryElement(root.evalNode(<span class="string">"objectFactory"</span>));</span><br><span class="line">      objectWrapperFactoryElement(root.evalNode(<span class="string">"objectWrapperFactory"</span>));</span><br><span class="line">      reflectorFactoryElement(root.evalNode(<span class="string">"reflectorFactory"</span>));</span><br><span class="line">      settingsElement(settings);</span><br><span class="line">      <span class="comment">// read it after objectFactory and objectWrapperFactory issue #631</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">// 解析environments标签及其子标签</span></span><br><span class="line">      environmentsElement(root.evalNode(<span class="string">"environments"</span>));</span><br><span class="line">      databaseIdProviderElement(root.evalNode(<span class="string">"databaseIdProvider"</span>));</span><br><span class="line"></span><br><span class="line">      <span class="comment">//解析自定义的Handler</span></span><br><span class="line">      typeHandlerElement(root.evalNode(<span class="string">"typeHandlers"</span>));</span><br><span class="line"></span><br><span class="line">      <span class="comment">//获取mappers标签的信息,并且解析mappers的子标签,这里很重要,实现了mapper接口与mapper.xml的映射</span></span><br><span class="line">      mapperElement(root.evalNode(<span class="string">"mappers"</span>));</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Error parsing SQL Mapper Configuration. Cause: "</span> + e, e);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="由此可见-parseConfiguration-方法就是对mybatis的标签进行解析-并且可以看到xml文件标签的编写顺序是按照解析标签方法的顺序而定的"><a href="#由此可见-parseConfiguration-方法就是对mybatis的标签进行解析-并且可以看到xml文件标签的编写顺序是按照解析标签方法的顺序而定的" class="headerlink" title="由此可见,parseConfiguration()方法就是对mybatis的标签进行解析,并且可以看到xml文件标签的编写顺序是按照解析标签方法的顺序而定的"></a>由此可见,parseConfiguration()方法就是对mybatis的标签进行解析,并且可以看到xml文件标签的编写顺序是按照解析标签方法的顺序而定的</h3><h3 id="先从简单的标签分析开始吧"><a href="#先从简单的标签分析开始吧" class="headerlink" title="先从简单的标签分析开始吧"></a>先从简单的<properties resource="jdbc.properties">标签分析开始吧</properties></h3><h3 id="propertiesElement-XNode-context"><a href="#propertiesElement-XNode-context" class="headerlink" title="propertiesElement(XNode context)"></a>propertiesElement(XNode context)</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">propertiesElement</span><span class="params">(XNode context)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  <span class="comment">//判断该子标签是否存在</span></span><br><span class="line">  <span class="keyword">if</span> (context != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">    * 下面都是properties标签的一些属性值</span></span><br><span class="line"><span class="comment">    * */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//获取子标签的name,value并且set进去properties对象中</span></span><br><span class="line">    Properties defaults = context.getChildrenAsProperties();</span><br><span class="line">    <span class="comment">//获取properties上面的resource的值,代表是配置文件的位置</span></span><br><span class="line">    String resource = context.getStringAttribute(<span class="string">"resource"</span>);</span><br><span class="line">    <span class="comment">//获取properties上面的url的值,不能够同时设置resource和url的值</span></span><br><span class="line">    String url = context.getStringAttribute(<span class="string">"url"</span>);</span><br><span class="line">    <span class="keyword">if</span> (resource != <span class="keyword">null</span> &amp;&amp; url != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"The properties element cannot specify both a URL and a resource based property file reference.  Please specify one or the other."</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//如果设置了resource属性</span></span><br><span class="line">    <span class="keyword">if</span> (resource != <span class="keyword">null</span>) &#123;</span><br><span class="line"></span><br><span class="line">      <span class="comment">//getResourceAsProperties通过resource的值获取对应的属性值并且封装成一个Properties对象,</span></span><br><span class="line">      <span class="comment">//原理是将配置文件中"="前面的作为key,后面的作为value,然后put进该对象</span></span><br><span class="line">      <span class="comment">//Properties extends Hashtable&lt;Object,Object&gt; 这个实际上是个Hashtable</span></span><br><span class="line">      defaults.putAll(Resources.getResourceAsProperties(resource));</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (url != <span class="keyword">null</span>) &#123;</span><br><span class="line">      defaults.putAll(Resources.getUrlAsProperties(url));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 将configuration对象中已配置的Properties属性与刚刚解析的融合</span></span><br><span class="line">    <span class="comment">// configuration这个对象会装载所解析mybatis配置文件的所有节点元素，这个对象很重要，一定要记着！！</span></span><br><span class="line">    <span class="comment">// 既然configuration对象用有一系列的get/set方法， 标志着我们可以使用java代码直接配置</span></span><br><span class="line">    <span class="comment">// 需要注意的是,getVariables()在第一次调用的时候,返回的是对象里面什么都没有(并不是null)</span></span><br><span class="line">    <span class="comment">// variables变量在configuration创建时是这么创建的:protected Properties variables = new Properties();</span></span><br><span class="line">    Properties vars = configuration.getVariables();</span><br><span class="line">    <span class="keyword">if</span> (vars != <span class="keyword">null</span>) &#123;</span><br><span class="line">      defaults.putAll(vars);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//设置回XPathParser对象中,后面可能有用</span></span><br><span class="line">    parser.setVariables(defaults);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//将最后设置完的Properties对象通过set方法设置回Configuration类中</span></span><br><span class="line">    configuration.setVariables(defaults);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="解析properties标签实际就是将属性配置文件中的key-value存放在一个Properties对象中-底层就是Hashtable中-并且将该对象set进configuration对象中"><a href="#解析properties标签实际就是将属性配置文件中的key-value存放在一个Properties对象中-底层就是Hashtable中-并且将该对象set进configuration对象中" class="headerlink" title="解析properties标签实际就是将属性配置文件中的key,value存放在一个Properties对象中,底层就是Hashtable中,并且将该对象set进configuration对象中."></a>解析properties标签实际就是将属性配置文件中的key,value存放在一个Properties对象中,底层就是Hashtable中,并且将该对象set进configuration对象中.</h3><h4 id="2-1-2-typeAliasesElement-解析typeAliases标签"><a href="#2-1-2-typeAliasesElement-解析typeAliases标签" class="headerlink" title="2.1.2 typeAliasesElement()解析typeAliases标签"></a><strong>2.1.2 typeAliasesElement()解析typeAliases标签</strong></h4><p>作用:就是给你的实体类创建一个别名,那么在Mapper.xml中使用就不会这么复杂</p>
+<h3 id="进入typeAliasesElement-XNode-parent"><a href="#进入typeAliasesElement-XNode-parent" class="headerlink" title="进入typeAliasesElement(XNode parent)"></a>进入typeAliasesElement(XNode parent)</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">typeAliasesElement</span><span class="params">(XNode parent)</span> </span>&#123;</span><br><span class="line">  <span class="comment">//判断该标签是否存在</span></span><br><span class="line">  <span class="keyword">if</span> (parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">//循环遍历子标签</span></span><br><span class="line">    <span class="keyword">for</span> (XNode child : parent.getChildren()) &#123;</span><br><span class="line">      <span class="comment">//判断子标签中是否存在&lt;package&gt;标签</span></span><br><span class="line">      <span class="keyword">if</span> (<span class="string">"package"</span>.equals(child.getName())) &#123;</span><br><span class="line">        <span class="comment">//获取&lt;package&gt;标签中的name的属性的值</span></span><br><span class="line">        String typeAliasPackage = child.getStringAttribute(<span class="string">"name"</span>);</span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * 这个方法分为步:</span></span><br><span class="line"><span class="comment">         *      1.configuration.getTypeAliasRegistry()获取TypeAliasRegistry对象</span></span><br><span class="line"><span class="comment">         *      2.TypeAliasRegistry,用来存放某类注册的别名</span></span><br><span class="line"><span class="comment">         *  该类中有个typeAliases属性是一个HashMap,mybatis默认地注册了一些java中常用的基本类型,集合...</span></span><br><span class="line"><span class="comment">         *  的别名</span></span><br><span class="line"><span class="comment">         *      3.registerAliases(typeAliasPackage)该方法就是把对应包下面的类,以key为普通类名.value是该类的class对象就是调用HashMap的put()方法.</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        configuration.getTypeAliasRegistry().registerAliases(typeAliasPackage);</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        String alias = child.getStringAttribute(<span class="string">"alias"</span>);</span><br><span class="line">        String type = child.getStringAttribute(<span class="string">"type"</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">          Class&lt;?&gt; clazz = Resources.classForName(type);</span><br><span class="line">          <span class="keyword">if</span> (alias == <span class="keyword">null</span>) &#123;</span><br><span class="line">            typeAliasRegistry.registerAlias(clazz);</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            typeAliasRegistry.registerAlias(alias, clazz);</span><br><span class="line">          &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Error registering typeAlias for '"</span> + alias + <span class="string">"'. Cause: "</span> + e, e);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="我要介绍的主要是"><a href="#我要介绍的主要是" class="headerlink" title="我要介绍的主要是"></a>我要介绍的主要是</h3><p><code>configuration.getTypeAliasRegistry().registerAliases(typeAliasPackage);</code>方法。这个方法首先getTypeAliasRegistry()获取注册中心，这个注册中心其实就是有个属性是HashMap,用来存放别名与对应的class对象,获取到TypeAliasRegistry后就执行他的registerAliases(typeAliasPackage)方法<br><strong>下面是TypeAliasRegistry这个类的结构：</strong> <code>protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();</code> 点进去TypeAliasRegistry看看这个类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TypeAliasRegistry</span> </span>&#123;</span><br><span class="line">	<span class="comment">//这个就是存放别名和具体类映射关系的地方,是一个HashMap</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, Class&lt;?&gt;&gt; TYPE_ALIASES = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">	<span class="comment">//这里创建时默认注册了一堆包名,这里就是在mapper.xml里可以使用的那些别名</span></span><br><span class="line">	<span class="comment">//这里的别名可以对应上官网上介绍的别名了,以后就不用苦逼的去官网找mybatis默认的java类型别名了,来这儿</span></span><br><span class="line">	<span class="comment">//这是官网地址: http://www.mybatis.org/mybatis-3/configuration.html#typeAliases</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">TypeAliasRegistry</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		registerAlias(<span class="string">"string"</span>, String.class);</span><br><span class="line">		registerAlias(<span class="string">"byte"</span>, Byte.clas);</span><br><span class="line">		registerAlias(<span class="string">"long"</span>, Long.class);</span><br><span class="line">		...</span><br><span class="line">	&#125;</span><br><span class="line">｝</span><br></pre></td></tr></table></figure>
+
+<h3 id="进入重点方法-registerAliases-typeAliasPackage-这个方法不断地调用自己的重载方法"><a href="#进入重点方法-registerAliases-typeAliasPackage-这个方法不断地调用自己的重载方法" class="headerlink" title="进入重点方法:registerAliases(typeAliasPackage)这个方法不断地调用自己的重载方法"></a>进入重点方法:registerAliases(typeAliasPackage)这个方法不断地调用自己的重载方法</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerAliases</span><span class="params">(String packageName)</span> </span>&#123;</span><br><span class="line">  registerAliases(packageName, Object.class);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerAliases</span><span class="params">(String packageName, Class&lt;?&gt; superType)</span> </span>&#123;</span><br><span class="line">  ResolverUtil&lt;Class&lt;?&gt;&gt; resolverUtil = <span class="keyword">new</span> ResolverUtil&lt;&gt;();</span><br><span class="line">  <span class="comment">//将该包名下的所有类和子包下面的以".class"结尾的文件,并且通过classloader的loader方法创建出对应的class对象</span></span><br><span class="line">  <span class="comment">//并且添加到Set集合中</span></span><br><span class="line">  resolverUtil.find(<span class="keyword">new</span> ResolverUtil.IsA(superType), packageName);</span><br><span class="line">  <span class="comment">//由于同一个包下面的类时不可能相同的,所以这里获取得到的所有class对象的是一个set集合</span></span><br><span class="line">  Set&lt;Class&lt;? extends Class&lt;?&gt;&gt;&gt; typeSet = resolverUtil.getClasses();</span><br><span class="line">  <span class="keyword">for</span> (Class&lt;?&gt; type : typeSet) &#123;</span><br><span class="line">    <span class="comment">// Ignore inner classes and interfaces (including package-info.java)</span></span><br><span class="line">    <span class="comment">// Skip also inner classes. See issue #6</span></span><br><span class="line">    <span class="comment">//如果该类是接口,是内部类,是成员属性时,就会被忽略</span></span><br><span class="line">    <span class="keyword">if</span> (!type.isAnonymousClass() &amp;&amp; !type.isInterface() &amp;&amp; !type.isMemberClass()) &#123;</span><br><span class="line">      <span class="comment">//调用重载方法</span></span><br><span class="line">      registerAlias(type);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerAlias</span><span class="params">(Class&lt;?&gt; type)</span> </span>&#123;</span><br><span class="line">  <span class="comment">//通过反射获取该类的简答类名,默认是类名首字母小写</span></span><br><span class="line">  String alias = type.getSimpleName();</span><br><span class="line">  <span class="comment">//获取@Alias注解的类对象</span></span><br><span class="line">  Alias aliasAnnotation = type.getAnnotation(Alias.class);</span><br><span class="line">  <span class="comment">//由此看出注解是优先于类的简单类名</span></span><br><span class="line">  <span class="keyword">if</span> (aliasAnnotation != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">//以直接中的value属性的值为别名</span></span><br><span class="line">    alias = aliasAnnotation.value();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//继续撸自己的重载方法</span></span><br><span class="line">  registerAlias(alias, type);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//注册别名的实质,就是将key为别名,value为class对象put进去HashMap中</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerAlias</span><span class="params">(String alias, Class&lt;?&gt; value)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (alias == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> TypeException(<span class="string">"The parameter alias cannot be null"</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// issue #748</span></span><br><span class="line">  String key = alias.toLowerCase(Locale.ENGLISH);</span><br><span class="line">  <span class="keyword">if</span> (typeAliases.containsKey(key) &amp;&amp; typeAliases.get(key) != <span class="keyword">null</span> &amp;&amp; !typeAliases.get(key).equals(value)) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> TypeException(<span class="string">"The alias '"</span> + alias + <span class="string">"' is already mapped to the value '"</span> + typeAliases.get(key).getName() + <span class="string">"'."</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  typeAliases.put(key, value);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="总结-以上是解析别名标签的过程-是以package子标签的过程-以另外一个子标签解析过程也是差不多的-只要基础知识打好-看懂是没问题的-记住-设置别名的底层原理是HashMap的put方法-key为别名-value为对应类的class对象-注解优先于子标签"><a href="#总结-以上是解析别名标签的过程-是以package子标签的过程-以另外一个子标签解析过程也是差不多的-只要基础知识打好-看懂是没问题的-记住-设置别名的底层原理是HashMap的put方法-key为别名-value为对应类的class对象-注解优先于子标签" class="headerlink" title="总结:以上是解析别名标签的过程,是以package子标签的过程,以另外一个子标签解析过程也是差不多的,只要基础知识打好,看懂是没问题的.记住:设置别名的底层原理是HashMap的put方法,key为别名,value为对应类的class对象.注解优先于子标签."></a>总结:以上是解析别名标签的过程,是以package子标签的过程,以另外一个子标签解析过程也是差不多的,只要基础知识打好,看懂是没问题的.记住:设置别名的底层原理是HashMap的put方法,key为别名,value为对应类的class对象.注解优先于子标签.</h3><h4 id="2-1-3-environmentsElement-解析environments标签"><a href="#2-1-3-environmentsElement-解析environments标签" class="headerlink" title="2.1.3 environmentsElement()解析environments标签"></a><strong>2.1.3 environmentsElement()解析environments标签</strong></h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 解析environments标签及其子标签</span></span><br><span class="line">environmentsElement(root.evalNode(<span class="string">"environments"</span>));</span><br></pre></td></tr></table></figure>
+
+<h3 id="进入environmentsElement-Xnode-方法"><a href="#进入environmentsElement-Xnode-方法" class="headerlink" title="进入environmentsElement(Xnode)方法:"></a>进入environmentsElement(Xnode)方法:</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 配置运行环境 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">environments</span> <span class="attr">default</span>=<span class="string">"mysql"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">environment</span> <span class="attr">id</span>=<span class="string">"mysql"</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--事务管理器  type="JDBC"表示使用JDBC默认的事务管理--&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">transactionManager</span> <span class="attr">type</span>=<span class="string">"JDBC"</span>/&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--type="POOLED" mybatis默认的数据库连接池  --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dataSource</span> <span class="attr">type</span>=<span class="string">"POOLED"</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!--连接DB资源的四要素  --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"driver"</span> <span class="attr">value</span>=<span class="string">"$&#123;jdbc.driver&#125;"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"url"</span> <span class="attr">value</span>=<span class="string">"$&#123;jdbc.url&#125;"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"username"</span> <span class="attr">value</span>=<span class="string">"$&#123;jdbc.user&#125;"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"password"</span> <span class="attr">value</span>=<span class="string">"$&#123;jdbc.password&#125;"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dataSource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">environment</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">environments</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这里context的值为前面执行方法解析出来的节点environments</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">environmentsElement</span><span class="params">(XNode context)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (context != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (environment == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">//获取根节点的default属性的值,并且设置当前的environment的值等于default的值,</span></span><br><span class="line">      <span class="comment">//也就是设置当前的默认环境是default的值</span></span><br><span class="line">      environment = context.getStringAttribute(<span class="string">"default"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//循环遍历子标签(子节点)</span></span><br><span class="line">    <span class="keyword">for</span> (XNode child : context.getChildren()) &#123;</span><br><span class="line">      <span class="comment">//获取子标签的id属性值</span></span><br><span class="line">      String id = child.getStringAttribute(<span class="string">"id"</span>);</span><br><span class="line">      <span class="comment">//判断id的值与当前环境environment的变量是否相同</span></span><br><span class="line">      <span class="comment">//这个方法的目的:在实际开发中,可能使用不同的数据库进行开发,但是一次只能使用一种,但是子标签可以</span></span><br><span class="line">      <span class="comment">//配置多个,通过id这个属性来匹配当前是使用那个环境进行</span></span><br><span class="line">      <span class="comment">//为什么不去解析其他的标签?因为用不到啊~用不到的也加载那不是浪费了?</span></span><br><span class="line">      <span class="keyword">if</span> (isSpecifiedEnvironment(id)) &#123;</span><br><span class="line">        <span class="comment">//获取解析好transactionManager标签;事务mybatis有两种：JDBC 和 MANAGED,</span></span><br><span class="line">        <span class="comment">// 配置为JDBC则直接使用JDBC的事务，配置为MANAGED则是将事务托管给容器</span></span><br><span class="line">        <span class="comment">//获取transactionManager标签的type属性,并且获取该标签的所有子标签的name,value值,set进去Properties对象</span></span><br><span class="line">        <span class="comment">//并且以该type的属性值,作为别名的名称去别名注册中心找到对应的class对象,通过反射将该数据库事务工厂创建出来</span></span><br><span class="line">        TransactionFactory txFactory = transactionManagerElement(child.evalNode(<span class="string">"transactionManager"</span>));</span><br><span class="line">        <span class="comment">//与上面的原理一样</span></span><br><span class="line">        DataSourceFactory dsFactory = dataSourceElement(child.evalNode(<span class="string">"dataSource"</span>));</span><br><span class="line">        <span class="comment">//获取数据库连接池</span></span><br><span class="line">        DataSource dataSource = dsFactory.getDataSource();</span><br><span class="line">        <span class="comment">//用上面获取的属性来初始化Environment的内部类Builder</span></span><br><span class="line">        Environment.Builder environmentBuilder = <span class="keyword">new</span> Environment.Builder(id)</span><br><span class="line">            .transactionFactory(txFactory)</span><br><span class="line">            .dataSource(dataSource);</span><br><span class="line">        <span class="comment">//用environmentBuilder.build()方法来创建Environment对象,并且set进去Configuration对象中</span></span><br><span class="line">        configuration.setEnvironment(environmentBuilder.build());</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="上面解析environment中的前两个标签的方法原理都一样-下面就只分析第一个transactionManagerElement-XNode"><a href="#上面解析environment中的前两个标签的方法原理都一样-下面就只分析第一个transactionManagerElement-XNode" class="headerlink" title="上面解析environment中的前两个标签的方法原理都一样.下面就只分析第一个transactionManagerElement(XNode):"></a>上面解析environment中的前两个标签的方法原理都一样.下面就只分析第一个transactionManagerElement(XNode):</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> TransactionFactory <span class="title">transactionManagerElement</span><span class="params">(XNode context)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (context != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">//获取标签的type属性</span></span><br><span class="line">    String type = context.getStringAttribute(<span class="string">"type"</span>);</span><br><span class="line">    <span class="comment">//获取子标签的name,value的值,并且set进去Properties对象中</span></span><br><span class="line">    Properties props = context.getChildrenAsProperties();</span><br><span class="line">    <span class="comment">//根据type获取对应的class对象,其实type就是作为别名去找hashMap中找class对象,然后根据class对象实例化出</span></span><br><span class="line">    <span class="comment">//TransactionFactory对象,type对应的数据库事务工厂</span></span><br><span class="line">    TransactionFactory factory = (TransactionFactory) resolveClass(type).getDeclaredConstructor().newInstance();</span><br><span class="line">    <span class="comment">//将上面的properties对象set进去该工厂</span></span><br><span class="line">    factory.setProperties(props);</span><br><span class="line">    <span class="keyword">return</span> factory;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Environment declaration requires a TransactionFactory."</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-1-3-mapperElement-解析mappers标签"><a href="#2-1-3-mapperElement-解析mappers标签" class="headerlink" title="2.1.3 mapperElement()解析mappers标签"></a><strong>2.1.3 mapperElement()解析mappers标签</strong></h4><h3 id="又再次说到这个标签的解析和映射"><a href="#又再次说到这个标签的解析和映射" class="headerlink" title="又再次说到这个标签的解析和映射"></a>又再次说到这个标签的解析和映射</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">  <span class="comment">//解析mappers标签及其子标签</span></span><br><span class="line">  <span class="comment">// 在这里会完成interface与mapper的映射</span></span><br><span class="line"><span class="comment">//	&lt;mappers&gt;</span></span><br><span class="line"><span class="comment">//		&lt;mapper resource="dao/mapper2.xml" /&gt;</span></span><br><span class="line"><span class="comment">//		&lt;mapper class="com.dy.dao.UserDao"/&gt;</span></span><br><span class="line"><span class="comment">//		&lt;mapper url="file://........"/&gt;</span></span><br><span class="line"><span class="comment">//		&lt;package name="dao"/&gt;</span></span><br><span class="line"><span class="comment">//	&lt;/mappers&gt;</span></span><br><span class="line">  <span class="comment">//parent的节点就是上一个方法所得到的节点为mappers</span></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">mapperElement</span><span class="params">(XNode parent)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">for</span> (XNode child : parent.getChildren()) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="string">"package"</span>.equals(child.getName())) &#123;</span><br><span class="line">          <span class="comment">//如果mappers节点的子节点是package, 那么就扫描package下的文件, 丢进configuration</span></span><br><span class="line">          <span class="comment">//我们主要讲这种情况,其他三种情况其实都是一个鸟样,一通百通</span></span><br><span class="line">          <span class="comment">//获取标签里制定的包名（name字段的值）</span></span><br><span class="line">          String mapperPackage = child.getStringAttribute(<span class="string">"name"</span>);</span><br><span class="line">          <span class="comment">//看吧，又是一个往configuration丢东西的方法。此方法就是用来添加mapper的</span></span><br><span class="line">          configuration.addMappers(mapperPackage);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">          <span class="comment">//如果是mapper标签就获取它域的值,域的可能有三种:resource,url,class</span></span><br><span class="line">          String resource = child.getStringAttribute(<span class="string">"resource"</span>);</span><br><span class="line">          String url = child.getStringAttribute(<span class="string">"url"</span>);</span><br><span class="line">          String mapperClass = child.getStringAttribute(<span class="string">"class"</span>);</span><br><span class="line">          <span class="comment">//三选一</span></span><br><span class="line">          <span class="keyword">if</span> (resource != <span class="keyword">null</span> &amp;&amp; url == <span class="keyword">null</span> &amp;&amp; mapperClass == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">//这里是resource</span></span><br><span class="line">            ErrorContext.instance().resource(resource);</span><br><span class="line">            InputStream inputStream = Resources.getResourceAsStream(resource);</span><br><span class="line">            <span class="comment">//mapper映射文件都是通过XMLMapperBuilder解析</span></span><br><span class="line">            XMLMapperBuilder mapperParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, configuration, resource,</span><br><span class="line">              configuration.getSqlFragments());</span><br><span class="line">            mapperParser.parse();</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> (resource == <span class="keyword">null</span> &amp;&amp; url != <span class="keyword">null</span> &amp;&amp; mapperClass == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">//这里是url</span></span><br><span class="line">            ErrorContext.instance().resource(url);</span><br><span class="line">            InputStream inputStream = Resources.getUrlAsStream(url);</span><br><span class="line">            XMLMapperBuilder mapperParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, configuration, url,</span><br><span class="line">              configuration.getSqlFragments());</span><br><span class="line">            mapperParser.parse();</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> (resource == <span class="keyword">null</span> &amp;&amp; url == <span class="keyword">null</span> &amp;&amp; mapperClass != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">//这里是class</span></span><br><span class="line">            Class&lt;?&gt; mapperInterface = Resources.classForName(mapperClass);</span><br><span class="line">            configuration.addMapper(mapperInterface);</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//选不到就丢错误</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(</span><br><span class="line">              <span class="string">"A mapper element may only specify a url, resource or class, but not more than one."</span>);</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="现在我们重点考虑package方式的解析mapper-xml的过程-因为这样就能节省多次写同样的标签的次数"><a href="#现在我们重点考虑package方式的解析mapper-xml的过程-因为这样就能节省多次写同样的标签的次数" class="headerlink" title="现在我们重点考虑package方式的解析mapper.xml的过程,因为这样就能节省多次写同样的标签的次数"></a>现在我们重点考虑package方式的解析mapper.xml的过程,因为这样就能节省多次写同样的标签的次数</h3><h3 id="configuration-addMappers-mapperPackage-方法"><a href="#configuration-addMappers-mapperPackage-方法" class="headerlink" title="configuration.addMappers(mapperPackage)方法"></a>configuration.addMappers(mapperPackage)方法</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addMappers</span><span class="params">(String packageName)</span> </span>&#123;</span><br><span class="line">  <span class="comment">//调用mapperRegistry.addMappers方法</span></span><br><span class="line">  mapperRegistry.addMappers(packageName);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>那么问题来了，mapperRegistry是什么，没错就是Map</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">跟进去看看MapperRegistry</span><br><span class="line"><span class="keyword">protected</span> <span class="keyword">final</span> MapperRegistry mapperRegistry = <span class="keyword">new</span> MapperRegistry(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MapperRegistry</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> Configuration config;</span><br><span class="line">	<span class="comment">// 这个map存放的是每一种接口对应的MapperProxyFactory</span></span><br><span class="line">	<span class="comment">//key:interface(当然也可以是类,但是按规定来的话应该是接口); value:MapperProxyFactory</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Class&lt;?&gt;, MapperProxyFactory&lt;?&gt;&gt; knownMappers = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">	....</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="继续跟进-mapperRegistry-addMappers-packageName-方法"><a href="#继续跟进-mapperRegistry-addMappers-packageName-方法" class="headerlink" title="继续跟进 mapperRegistry.addMappers(packageName)方法"></a>继续跟进 mapperRegistry.addMappers(packageName)方法</h3><p>又是一个重复调用的重载方法:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addMappers</span><span class="params">(String packageName)</span> </span>&#123;</span><br><span class="line">  addMappers(packageName, Object.class);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addMappers</span><span class="params">(String packageName, Class&lt;?&gt; superType)</span> </span>&#123;</span><br><span class="line">  <span class="comment">//new 一个解析工具类</span></span><br><span class="line">  ResolverUtil&lt;Class&lt;?&gt;&gt; resolverUtil = <span class="keyword">new</span> ResolverUtil&lt;&gt;();</span><br><span class="line">  <span class="comment">//将packName包和子包的所有文件都进行搜索,如果发现文件以".class"结尾的文件,则以classloader的方式创建class对象并且存放到set集合中</span></span><br><span class="line">  resolverUtil.find(<span class="keyword">new</span> ResolverUtil.IsA(superType), packageName);</span><br><span class="line">  <span class="comment">//获取Set集合中的所有class对象</span></span><br><span class="line">  Set&lt;Class&lt;? extends Class&lt;?&gt;&gt;&gt; mapperSet = resolverUtil.getClasses();</span><br><span class="line">  <span class="keyword">for</span> (Class&lt;?&gt; mapperClass : mapperSet) &#123;</span><br><span class="line">    <span class="comment">//将mapperClass注册到MapperRegister里面,并且进行了mapper.xml解析和与mapper接口的映射</span></span><br><span class="line">    addMapper(mapperClass);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> &lt;T&gt; <span class="function"><span class="keyword">void</span> <span class="title">addMapper</span><span class="params">(Class&lt;T&gt; type)</span> </span>&#123;</span><br><span class="line">  <span class="comment">//判断该类是否为interface</span></span><br><span class="line">  <span class="keyword">if</span> (type.isInterface()) &#123;</span><br><span class="line">    <span class="comment">//如果该Mapper已经加载过则报错</span></span><br><span class="line">    <span class="keyword">if</span> (hasMapper(type)) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> BindingException(<span class="string">"Type "</span> + type + <span class="string">" is already known to the MapperRegistry."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//标记位: 标志是否加载完成,用于反正加载过程中出异常之后,没有把已经put进去的key,value及时地删除,防止占用内存</span></span><br><span class="line">    <span class="keyword">boolean</span> loadCompleted = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">//knownMappers是一个HashMap用来存放已经加载过的Mapper接口</span></span><br><span class="line">      knownMappers.put(type, <span class="keyword">new</span> MapperProxyFactory&lt;&gt;(type));</span><br><span class="line">      <span class="comment">// It's important that the type is added before the parser is run</span></span><br><span class="line">      <span class="comment">// otherwise the binding may automatically be attempted by the</span></span><br><span class="line">      <span class="comment">// mapper parser. If the type is already known, it won't try.</span></span><br><span class="line">      <span class="comment">//创建Mapper接口的注解解析器parser,先对xml解析之后再对注解进行解析,这样就实现了注解优于xml执行</span></span><br><span class="line">      MapperAnnotationBuilder parser = <span class="keyword">new</span> MapperAnnotationBuilder(config, type);</span><br><span class="line">      <span class="comment">//解析sql语句</span></span><br><span class="line">      parser.parse();</span><br><span class="line">      <span class="comment">//设置成功加载完的标志位</span></span><br><span class="line">      loadCompleted = <span class="keyword">true</span>;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      <span class="comment">//保证无论是否异常都必须执行对加载结果的检查,防止异常的发生</span></span><br><span class="line">      <span class="keyword">if</span> (!loadCompleted) &#123;</span><br><span class="line">        knownMappers.remove(type);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="进入parse方法-解析xml和注解的sql语句"><a href="#进入parse方法-解析xml和注解的sql语句" class="headerlink" title="进入parse方法:解析xml和注解的sql语句"></a>进入parse方法:解析xml和注解的sql语句</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这是注解解析器的parse的方法</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">parse</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">//获取接口的全限定类名</span></span><br><span class="line">  String resource = type.toString();</span><br><span class="line">  <span class="comment">//判断这个类是否已经加载过了,防止二次加载</span></span><br><span class="line">  <span class="keyword">if</span> (!configuration.isResourceLoaded(resource)) &#123;</span><br><span class="line">    <span class="comment">//加载和解析mapper.xml文件</span></span><br><span class="line">    loadXmlResource();</span><br><span class="line">    <span class="comment">//标志mapper接口已经成功加载</span></span><br><span class="line">    configuration.addLoadedResource(resource);</span><br><span class="line">    assistant.setCurrentNamespace(type.getName());</span><br><span class="line">    parseCache();</span><br><span class="line">    parseCacheRef();</span><br><span class="line">    <span class="comment">//获取mapper接口的所有方法</span></span><br><span class="line">    Method[] methods = type.getMethods();</span><br><span class="line">    <span class="keyword">for</span> (Method method : methods) &#123;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// issue #237</span></span><br><span class="line">        <span class="keyword">if</span> (!method.isBridge()) &#123;</span><br><span class="line">          <span class="comment">//根据方法名来解析sql语句</span></span><br><span class="line">          parseStatement(method);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">catch</span> (IncompleteElementException e) &#123;</span><br><span class="line">        configuration.addIncompleteMethod(<span class="keyword">new</span> MethodResolver(<span class="keyword">this</span>, method));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//处理一些出现异常的Method</span></span><br><span class="line">  parsePendingMethods();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="这里有个重要的方法loadXmlResource-说明了为什么要使用package的方式加载xml时文件名要和mapper的接口名一样"><a href="#这里有个重要的方法loadXmlResource-说明了为什么要使用package的方式加载xml时文件名要和mapper的接口名一样" class="headerlink" title="这里有个重要的方法loadXmlResource():说明了为什么要使用package的方式加载xml时文件名要和mapper的接口名一样"></a>这里有个重要的方法loadXmlResource():说明了为什么要使用package的方式加载xml时文件名要和mapper的接口名一样</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">loadXmlResource</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// Spring may not know the real resource name so we check a flag</span></span><br><span class="line">  <span class="comment">// to prevent loading again a resource twice</span></span><br><span class="line">  <span class="comment">// this flag is set at XMLMapperBuilder#bindMapperForNamespace</span></span><br><span class="line">  <span class="keyword">if</span> (!configuration.isResourceLoaded(<span class="string">"namespace:"</span> + type.getName())) &#123;</span><br><span class="line">    <span class="comment">//用mapper接口的全限定类名与".xml"拼接,获取mapper.xml的文件名</span></span><br><span class="line">    <span class="comment">//这就是为什么使用package的时候要求mapper.xml的名称要与mapper接口名称一样</span></span><br><span class="line">    String xmlResource = type.getName().replace(<span class="string">'.'</span>, <span class="string">'/'</span>) + <span class="string">".xml"</span>;</span><br><span class="line">    <span class="comment">// #1347</span></span><br><span class="line">    InputStream inputStream = type.getResourceAsStream(<span class="string">"/"</span> + xmlResource);</span><br><span class="line">    <span class="keyword">if</span> (inputStream == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">// Search XML mapper that is not in the module but in the classpath.</span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//如果不存在的话就去classpath下面找相同名称的文件进行加载</span></span><br><span class="line">        inputStream = Resources.getResourceAsStream(type.getClassLoader(), xmlResource);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (IOException e2) &#123;</span><br><span class="line">        <span class="comment">// ignore, resource is not required</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">     <span class="comment">//如果文件存在的话,就在这里进行解析</span></span><br><span class="line">    <span class="keyword">if</span> (inputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">      XMLMapperBuilder xmlParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, assistant.getConfiguration(), xmlResource, configuration.getSqlFragments(), type.getName());</span><br><span class="line">      <span class="comment">//解析mapper.xml</span></span><br><span class="line">      xmlParser.parse();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="进入xmlParser-parse-解析mapper-xml"><a href="#进入xmlParser-parse-解析mapper-xml" class="headerlink" title="进入xmlParser.parse():解析mapper.xml"></a>进入xmlParser.parse():解析mapper.xml</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">parse</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!configuration.isResourceLoaded(resource)) &#123;</span><br><span class="line">    <span class="comment">//先获取&lt;mapper标签的所有信息&gt;,然后再对mapper下面的子标签进行解析</span></span><br><span class="line">    configurationElement(parser.evalNode(<span class="string">"/mapper"</span>));</span><br><span class="line">    <span class="comment">//将该mapper.xml加载到已经加载过的资源里面,标志该文件已经解析完成</span></span><br><span class="line">    configuration.addLoadedResource(resource);</span><br><span class="line">    <span class="comment">//namespace处理</span></span><br><span class="line">    bindMapperForNamespace();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">//这里的执行的方法是一些特殊判处异常的resultMaps,statements,cacheRefs</span></span><br><span class="line">  parsePendingResultMaps();</span><br><span class="line">  parsePendingCacheRefs();</span><br><span class="line">  parsePendingStatements();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="再深入的方法这里就不放了，差不多就得了。需要注意的一点就是，如果使用的是package标签来扫描mapper文件，那么mapper文件的文件名必须要和接口名相同，并且放在同一个包下（或者直接放在classpath下）。而另三种扫描mapper的方式只需要命名空间与接口全限定名相同。为什么呢？在上面代码中的loadXmlResource-方法里面会给你一个满意的解释，看懂了package为什么要相同，那么另外三种也不在话下，猜也猜得出。注释我也打上了，看就得了。"><a href="#再深入的方法这里就不放了，差不多就得了。需要注意的一点就是，如果使用的是package标签来扫描mapper文件，那么mapper文件的文件名必须要和接口名相同，并且放在同一个包下（或者直接放在classpath下）。而另三种扫描mapper的方式只需要命名空间与接口全限定名相同。为什么呢？在上面代码中的loadXmlResource-方法里面会给你一个满意的解释，看懂了package为什么要相同，那么另外三种也不在话下，猜也猜得出。注释我也打上了，看就得了。" class="headerlink" title="再深入的方法这里就不放了，差不多就得了。需要注意的一点就是，如果使用的是package标签来扫描mapper文件，那么mapper文件的文件名必须要和接口名相同，并且放在同一个包下（或者直接放在classpath下）。而另三种扫描mapper的方式只需要命名空间与接口全限定名相同。为什么呢？在上面代码中的loadXmlResource()方法里面会给你一个满意的解释，看懂了package为什么要相同，那么另外三种也不在话下，猜也猜得出。注释我也打上了，看就得了。"></a>再深入的方法这里就不放了，差不多就得了。需要注意的一点就是，如果使用的是package标签来扫描mapper文件，那么mapper文件的文件名必须要和接口名相同，并且放在同一个包下（或者直接放在classpath下）。而另三种扫描mapper的方式只需要命名空间与接口全限定名相同。为什么呢？在上面代码中的loadXmlResource()方法里面会给你一个满意的解释，看懂了package为什么要相同，那么另外三种也不在话下，猜也猜得出。注释我也打上了，看就得了。</h3><h3 id="2-2-创建SqlSessionFactory之build-parser-parse-方法"><a href="#2-2-创建SqlSessionFactory之build-parser-parse-方法" class="headerlink" title="2.2 创建SqlSessionFactory之build(parser.parse());方法"></a><strong>2.2 创建SqlSessionFactory之build(parser.parse());方法</strong></h3><p>虽然说上面的那个过程并不是我们最后想要的结果,但是知道了parser.parse()解析主配置文件的过程,并且最后一个结果封装成一个Configuration对象,这是发生在创建SqlSessionFactory的过程中,但是真正创建SqlSessionFactory的方法是build(parser.parse()),接下来我们要跟进去这个方法:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//生成一个SqlSessionFactory的实现类DefaultSqlSessionFactory并且将解析主配置文件生成的config传入</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> SqlSessionFactory <span class="title">build</span><span class="params">(Configuration config)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> DefaultSqlSessionFactory(config);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="然后目的就达到了-成功获取到了SqlSessionFactory-DefaultSqlSessionFactory"><a href="#然后目的就达到了-成功获取到了SqlSessionFactory-DefaultSqlSessionFactory" class="headerlink" title="然后目的就达到了,成功获取到了SqlSessionFactory(DefaultSqlSessionFactory)"></a>然后目的就达到了,成功获取到了SqlSessionFactory(DefaultSqlSessionFactory)</h3><h3 id="3-回来到获取SqlSession"><a href="#3-回来到获取SqlSession" class="headerlink" title="**3.回来到获取SqlSession"></a>**3.回来到获取SqlSession</h3><h3 id="回到实验代码"><a href="#回到实验代码" class="headerlink" title="回到实验代码"></a>回到实验代码</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//加载主配置文件</span></span><br><span class="line">InputStream inputStream = Resources.getResourceAsStream(<span class="string">"mybatisConfig.xml"</span>);</span><br><span class="line"><span class="comment">//创建SqlSessionFactory对象</span></span><br><span class="line">SqlSessionFactory sqlSessionFactory = <span class="keyword">new</span> SqlSessionFactoryBuilder().build(inputStream);</span><br><span class="line">sqlSession = sqlSessionFactory.openSession();</span><br></pre></td></tr></table></figure>
+
+<h3 id="跟进sqlSessionFactory-openSession-来获取sqlSession"><a href="#跟进sqlSessionFactory-openSession-来获取sqlSession" class="headerlink" title="跟进sqlSessionFactory.openSession()来获取sqlSession"></a>跟进sqlSessionFactory.openSession()来获取sqlSession</h3><h3 id="这又是一个重载方法"><a href="#这又是一个重载方法" class="headerlink" title="这又是一个重载方法"></a>这又是一个重载方法</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> SqlSession <span class="title">openSession</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">//参数2:代表事务的隔离级别</span></span><br><span class="line">  <span class="comment">//参数3:代表是否自动提交事务</span></span><br><span class="line">  <span class="keyword">return</span> openSessionFromDataSource(configuration.getDefaultExecutorType(), <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>configuration.getDefaultExecutorType()这是什么鬼东西??????点进去看一下,是一个ExecutorType类型的形参</p>
+<p> ExecutorType.SIMPLE又是一个不懂的东西?</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> ExecutorType &#123;</span><br><span class="line">  SIMPLE, REUSE, BATCH</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="这是一个简单的枚举-代表的是执行器种类-这个在下一个文章介绍如何执行sql的时候才能将到Executor-所以下篇文章再来探讨"><a href="#这是一个简单的枚举-代表的是执行器种类-这个在下一个文章介绍如何执行sql的时候才能将到Executor-所以下篇文章再来探讨" class="headerlink" title="这是一个简单的枚举,代表的是执行器种类,这个在下一个文章介绍如何执行sql的时候才能将到Executor,所以下篇文章再来探讨"></a>这是一个简单的枚举,代表的是执行器种类,这个在下一个文章介绍如何执行sql的时候才能将到Executor,所以下篇文章再来探讨</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">  <span class="comment">//真正的获取sqlSession，这个SqlSession里面需要配置类configuration，执行器executor，是否提交标志autoCommit</span></span><br><span class="line"><span class="comment">//executor里面需要事务tx，执行器类型execType，默认为ExecutorType.SIMPLE</span></span><br><span class="line">  <span class="function"><span class="keyword">private</span> SqlSession <span class="title">openSessionFromDataSource</span><span class="params">(ExecutorType execType, TransactionIsolationLevel level, <span class="keyword">boolean</span> autoCommit)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//创建一个新事务</span></span><br><span class="line">    Transaction tx = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">final</span> Environment environment = configuration.getEnvironment();</span><br><span class="line">      <span class="comment">//从environment里获取事务，这个没毛病吧？environment标签里有什么来着？</span></span><br><span class="line">      <span class="comment">//&lt;transactionManager type="JDBC" /&gt;</span></span><br><span class="line">      <span class="comment">//&lt;dataSource type="POOLED"&gt; ... &lt;/dataSource&gt;</span></span><br><span class="line">      <span class="keyword">final</span> TransactionFactory transactionFactory = getTransactionFactoryFromEnvironment(environment);</span><br><span class="line">      tx = transactionFactory.newTransaction(environment.getDataSource(), level, autoCommit);</span><br><span class="line">      <span class="comment">//获取sql语句的Executor(执行器),根据execType来获取对应类型的执行器</span></span><br><span class="line">      <span class="comment">//一共有三种Executor,并且都是继承BaseExecutor的</span></span><br><span class="line">      <span class="keyword">final</span> Executor executor = configuration.newExecutor(tx, execType);</span><br><span class="line">      <span class="comment">//返回DefaultSqlSession对象,SqlSession的实现类</span></span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> DefaultSqlSession(configuration, executor, autoCommit);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">      <span class="comment">//防止在已经获取了连接之后,执行过程中出现了异常,被捕获了,要将该连接给关闭,不然就会造成资源的浪费,影响程序的性能</span></span><br><span class="line">      closeTransaction(tx); <span class="comment">// may have fetched a connection so lets call close()</span></span><br><span class="line">      <span class="keyword">throw</span> ExceptionFactory.wrapException(<span class="string">"Error opening session.  Cause: "</span> + e, e);</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      ErrorContext.instance().reset();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>到此为止，SqlSession获取完成。获取SqlSession过程比创建SqlSessionFactory简单多了，只要从configuration中获取到要用的东西就行了。<br>说到这里不得不再次提一下，Configuration非常非常重要！对于mybatis的所有配置和属性，几乎都在这里了。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/mybatis/" rel="tag"># mybatis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/19/mybatis源码分析1-环境搭建/" rel="next" title="mybatis源码分析1--环境搭建">
+                <i class="fa fa-chevron-left"></i> mybatis源码分析1--环境搭建
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">pan tao</p>
+              <p class="site-description motion-element" itemprop="description">这个人有点东西</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">15</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#一-实验关键代码"><span class="nav-number">1.</span> <span class="nav-text">一.实验关键代码</span></a></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#二-创建SqlSessionFactory对象"><span class="nav-number"></span> <span class="nav-text">二.创建SqlSessionFactory对象</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#进入build-方法"><span class="nav-number">1.</span> <span class="nav-text">进入build()方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进入parse-方法"><span class="nav-number">2.</span> <span class="nav-text">进入parse()方法:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#但是我们发现parser-evalNode-“-configuration”-这个方法只是获取到configuration标签的信息-并没有去解析子标签-所以我们继续进入parseConfiguration方法"><span class="nav-number">3.</span> <span class="nav-text">但是我们发现parser.evalNode(“/configuration”)这个方法只是获取到configuration标签的信息,并没有去解析子标签,所以我们继续进入parseConfiguration方法()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#由此可见-parseConfiguration-方法就是对mybatis的标签进行解析-并且可以看到xml文件标签的编写顺序是按照解析标签方法的顺序而定的"><span class="nav-number">4.</span> <span class="nav-text">由此可见,parseConfiguration()方法就是对mybatis的标签进行解析,并且可以看到xml文件标签的编写顺序是按照解析标签方法的顺序而定的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#先从简单的标签分析开始吧"><span class="nav-number">5.</span> <span class="nav-text">先从简单的标签分析开始吧</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#propertiesElement-XNode-context"><span class="nav-number">6.</span> <span class="nav-text">propertiesElement(XNode context)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解析properties标签实际就是将属性配置文件中的key-value存放在一个Properties对象中-底层就是Hashtable中-并且将该对象set进configuration对象中"><span class="nav-number">7.</span> <span class="nav-text">解析properties标签实际就是将属性配置文件中的key,value存放在一个Properties对象中,底层就是Hashtable中,并且将该对象set进configuration对象中.</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1-2-typeAliasesElement-解析typeAliases标签"><span class="nav-number">7.1.</span> <span class="nav-text">2.1.2 typeAliasesElement()解析typeAliases标签</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进入typeAliasesElement-XNode-parent"><span class="nav-number">8.</span> <span class="nav-text">进入typeAliasesElement(XNode parent)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#我要介绍的主要是"><span class="nav-number">9.</span> <span class="nav-text">我要介绍的主要是</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进入重点方法-registerAliases-typeAliasPackage-这个方法不断地调用自己的重载方法"><span class="nav-number">10.</span> <span class="nav-text">进入重点方法:registerAliases(typeAliasPackage)这个方法不断地调用自己的重载方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结-以上是解析别名标签的过程-是以package子标签的过程-以另外一个子标签解析过程也是差不多的-只要基础知识打好-看懂是没问题的-记住-设置别名的底层原理是HashMap的put方法-key为别名-value为对应类的class对象-注解优先于子标签"><span class="nav-number">11.</span> <span class="nav-text">总结:以上是解析别名标签的过程,是以package子标签的过程,以另外一个子标签解析过程也是差不多的,只要基础知识打好,看懂是没问题的.记住:设置别名的底层原理是HashMap的put方法,key为别名,value为对应类的class对象.注解优先于子标签.</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1-3-environmentsElement-解析environments标签"><span class="nav-number">11.1.</span> <span class="nav-text">2.1.3 environmentsElement()解析environments标签</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进入environmentsElement-Xnode-方法"><span class="nav-number">12.</span> <span class="nav-text">进入environmentsElement(Xnode)方法:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#上面解析environment中的前两个标签的方法原理都一样-下面就只分析第一个transactionManagerElement-XNode"><span class="nav-number">13.</span> <span class="nav-text">上面解析environment中的前两个标签的方法原理都一样.下面就只分析第一个transactionManagerElement(XNode):</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1-3-mapperElement-解析mappers标签"><span class="nav-number">13.1.</span> <span class="nav-text">2.1.3 mapperElement()解析mappers标签</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#又再次说到这个标签的解析和映射"><span class="nav-number">14.</span> <span class="nav-text">又再次说到这个标签的解析和映射</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#现在我们重点考虑package方式的解析mapper-xml的过程-因为这样就能节省多次写同样的标签的次数"><span class="nav-number">15.</span> <span class="nav-text">现在我们重点考虑package方式的解析mapper.xml的过程,因为这样就能节省多次写同样的标签的次数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#configuration-addMappers-mapperPackage-方法"><span class="nav-number">16.</span> <span class="nav-text">configuration.addMappers(mapperPackage)方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#继续跟进-mapperRegistry-addMappers-packageName-方法"><span class="nav-number">17.</span> <span class="nav-text">继续跟进 mapperRegistry.addMappers(packageName)方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进入parse方法-解析xml和注解的sql语句"><span class="nav-number">18.</span> <span class="nav-text">进入parse方法:解析xml和注解的sql语句</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#这里有个重要的方法loadXmlResource-说明了为什么要使用package的方式加载xml时文件名要和mapper的接口名一样"><span class="nav-number">19.</span> <span class="nav-text">这里有个重要的方法loadXmlResource():说明了为什么要使用package的方式加载xml时文件名要和mapper的接口名一样</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进入xmlParser-parse-解析mapper-xml"><span class="nav-number">20.</span> <span class="nav-text">进入xmlParser.parse():解析mapper.xml</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#再深入的方法这里就不放了，差不多就得了。需要注意的一点就是，如果使用的是package标签来扫描mapper文件，那么mapper文件的文件名必须要和接口名相同，并且放在同一个包下（或者直接放在classpath下）。而另三种扫描mapper的方式只需要命名空间与接口全限定名相同。为什么呢？在上面代码中的loadXmlResource-方法里面会给你一个满意的解释，看懂了package为什么要相同，那么另外三种也不在话下，猜也猜得出。注释我也打上了，看就得了。"><span class="nav-number">21.</span> <span class="nav-text">再深入的方法这里就不放了，差不多就得了。需要注意的一点就是，如果使用的是package标签来扫描mapper文件，那么mapper文件的文件名必须要和接口名相同，并且放在同一个包下（或者直接放在classpath下）。而另三种扫描mapper的方式只需要命名空间与接口全限定名相同。为什么呢？在上面代码中的loadXmlResource()方法里面会给你一个满意的解释，看懂了package为什么要相同，那么另外三种也不在话下，猜也猜得出。注释我也打上了，看就得了。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-创建SqlSessionFactory之build-parser-parse-方法"><span class="nav-number">22.</span> <span class="nav-text">2.2 创建SqlSessionFactory之build(parser.parse());方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#然后目的就达到了-成功获取到了SqlSessionFactory-DefaultSqlSessionFactory"><span class="nav-number">23.</span> <span class="nav-text">然后目的就达到了,成功获取到了SqlSessionFactory(DefaultSqlSessionFactory)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-回来到获取SqlSession"><span class="nav-number">24.</span> <span class="nav-text">**3.回来到获取SqlSession</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#回到实验代码"><span class="nav-number">25.</span> <span class="nav-text">回到实验代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#跟进sqlSessionFactory-openSession-来获取sqlSession"><span class="nav-number">26.</span> <span class="nav-text">跟进sqlSessionFactory.openSession()来获取sqlSession</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#这又是一个重载方法"><span class="nav-number">27.</span> <span class="nav-text">这又是一个重载方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#这是一个简单的枚举-代表的是执行器种类-这个在下一个文章介绍如何执行sql的时候才能将到Executor-所以下篇文章再来探讨"><span class="nav-number">28.</span> <span class="nav-text">这是一个简单的枚举,代表的是执行器种类,这个在下一个文章介绍如何执行sql的时候才能将到Executor,所以下篇文章再来探讨</span></a></li></ol></li></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pan tao</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
